@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 — AuthService Interface · Jio_Leh Auth Refactor</title>
+<meta name="description" content="Testability via abstraction — the Dependency Inversion Principle.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231d3d28'/><text x='16' y='22' font-size='15' font-family='monospace' font-weight='bold' fill='%2346c47e' text-anchor='middle'>JL</text></svg>">
+<script>try{var t=localStorage.getItem('jl-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body>
+<div id="progress"></div>
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <a class="brand" href="index.html">
+    <span class="logo">JL</span>
+    <span>Jio_Leh <span class="sub">/ Auth Refactor</span></span>
+  </a>
+  <span class="spacer"></span>
+  <nav class="tnav">
+    <a href="index.html">Overview</a>
+    <a href="01-auth-service-interface.html">Changes</a>
+  </nav>
+  <a class="icon-btn" href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener" aria-label="App repository"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+  <button class="icon-btn" id="themeBtn" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+</header>
+<div class="backdrop"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <input id="sideFilter" class="side-filter" type="text" placeholder="Filter sections  ( / )" aria-label="Filter sections">
+    <div class="side-label">Start here</div><a class="nav-link" href="index.html" data-search="Overview &amp; Index 00"><span class="num">00</span><span>Overview &amp; Index</span></a><div class="side-label" style="margin-top:18px">The six changes</div><a class="nav-link active" href="01-auth-service-interface.html" data-search="AuthService Interface 01"><span class="num">01</span><span>AuthService Interface</span></a><a class="nav-link" href="02-service-provider-di.html" data-search="ServiceProvider DI 02"><span class="num">02</span><span>ServiceProvider DI</span></a><a class="nav-link" href="03-auth-gate-split.html" data-search="AuthGate Split 03"><span class="num">03</span><span>AuthGate Split</span></a><a class="nav-link" href="04-race-condition-fix.html" data-search="Race Condition Fix 04"><span class="num">04</span><span>Race Condition Fix</span></a><a class="nav-link" href="05-error-logging.html" data-search="Error Logging 05"><span class="num">05</span><span>Error Logging</span></a><a class="nav-link" href="06-directory-reorganization.html" data-search="Directory Reorg 06"><span class="num">06</span><span>Directory Reorg</span></a>
+  </aside>
+  <main class="content">
+    <div class="content-inner">
+      <div class="crumbs"><a href="index.html">Auth Refactor</a> &nbsp;/&nbsp; 01 · AuthService Interface</div><span class="eyebrow">Change 01 &middot; Dependency Inversion</span><h1>AuthService Interface</h1><p class="lead">Testability via abstraction &mdash; the Dependency Inversion Principle.</p><div class="hero-meta"><span class="chip">Commit <code>eb018f4</code></span><span class="chip">6 files changed</span><span class="chip"><span style="color:var(--good)">+150</span>&nbsp;/&nbsp;<span style="color:var(--bad)">&minus;204</span> lines</span><span class="chip">Dependency Inversion (DIP)</span></div><h2 id="problem" data-toc="1. The problem">1. The problem<a class="anchor" href="#problem" aria-label="Link to section">#</a></h2><p><code>AuthService</code>&rsquo;s constructor took five optional functions that existed <em>only</em> so tests could fake behaviour:</p><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">auth_service.dart — before</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>AuthService({
+  SupabaseClient? client,
+  Session? Function()? currentSession,
+  User? Function()? currentUser,
+  Future&lt;UserResponse&gt; Function()? getUser,
+  Future&lt;void&gt; Function()? signOut,
+});</code></pre></div><p>Consequently every method had to branch on &ldquo;am I in a test?&rdquo;:</p><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>User? getCurrentUser() {
+  if (_currentUser != null) return _currentUser();   // fake path
+  return _supabase.auth.currentUser;                 // real path
+}</code></pre></div><p>The class mixed two unrelated concerns: (1) <strong>what it does</strong> (its real job) and (2) <strong>how we swap it out for tests</strong> (a construction concern). That produced four concrete pains.</p><div class="tablewrap"><table><thead><tr><th>#</th><th>Pain</th><th>Explanation</th></tr></thead><tbody><tr><td>1</td><td><strong>Smear</strong></td><td>The fake-vs-real check was scattered across every method, interleaving test wiring with production logic.</td></tr><tr><td>2</td><td><strong>Half-real objects</strong></td><td>You could inject a fake <code>currentSession</code> but leave the real <code>getUser</code> &mdash; so <code>isSignedIn()</code> is fake while <code>hasValidSession()</code> secretly hits the network. The type system <em>allowed</em> this broken mix.</td></tr><tr><td>3</td><td><strong>Invisible contract</strong></td><td>Asked &ldquo;what can <code>AuthService</code> do?&rdquo;, the constructor answered with plumbing (&ldquo;a client and four optional functions&rdquo;), not capabilities.</td></tr><tr><td>4</td><td><strong>Doesn&rsquo;t scale</strong></td><td>Adding one testable method = four edits in three places: the method, a constructor parameter, a field, and an <code>if</code>-branch.</td></tr></tbody></table></div><div class="callout callout-warn"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><div><p><span class="label">Root cause:</span> one class doing both its job <em>and</em> its own test-swapping.</p></div></div><h2 id="options" data-toc="2. Options we discussed (naïve → preferred)">2. Options we discussed (naïve → preferred)<a class="anchor" href="#options" aria-label="Link to section">#</a></h2><div class="tablewrap"><table><thead><tr><th>Level</th><th>Approach</th><th>Pros</th><th>Cons</th><th>Verdict</th></tr></thead><tbody><tr><td>0</td><td>No seam &mdash; call Supabase directly</td><td>Simplest code</td><td>Untestable &mdash; <code>Supabase.instance</code> is a global needing real init</td><td><span class="verdict v-reject">Rejected</span></td></tr><tr><td>1</td><td>Function hooks (the original)</td><td>Tests run without live Supabase</td><td>All four pains above</td><td><span class="verdict v-reject">Replaced</span></td></tr><tr><td>2</td><td>Inject the Supabase auth client (<code>GoTrueClient</code>)</td><td>One injection point; no <code>if</code>-branches</td><td>Still coupled to Supabase&rsquo;s type; tests mock Supabase&rsquo;s API; vendor lock-in</td><td><span class="verdict v-neutral">Improvement only</span></td></tr><tr><td>3</td><td><strong>Program to an interface you own</strong></td><td>No smear; no half-real objects; self-documenting; scales; DIP</td><td>One extra file; interface still names Supabase types (<code>User</code>/<code>Session</code>)</td><td><span class="verdict v-chosen">CHOSEN</span></td></tr><tr><td>4</td><td>Full repository layer / codegen mocks</td><td>Maximum flexibility</td><td>Over-engineering for one service</td><td><span class="verdict v-reject">Not chosen</span></td></tr></tbody></table></div><p><strong>Why Level 3 maps cleanly onto the four pains:</strong></p><ul><li><strong>No smear</strong> &rarr; real logic lives only in <code>SupabaseAuthService</code>; fakes live only in <code>FakeAuthService</code>.</li><li><strong>No half-real objects</strong> &rarr; an object is wholly real or wholly fake; you cannot mix.</li><li><strong>Visible contract</strong> &rarr; the abstract class <em>is</em> the documentation.</li><li><strong>Scales</strong> &rarr; a new capability is one interface method + two implementations.</li></ul><div class="callout callout-bulb"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><div><p><span class="label">Bonus:</span> This is the <strong>Dependency Inversion Principle</strong> &mdash; the app depends on an abstraction it owns, not on Supabase. Swapping providers later means writing one new class and changing <em>zero</em> tests.</p></div></div><h2 id="placement" data-toc="3. File-placement decision">3. File-placement decision<a class="anchor" href="#placement" aria-label="Link to section">#</a></h2><p><strong>Q:</strong> should the interface and implementation go in separate folders (<code>domain/</code> vs <code>data/</code>)?</p><p><strong>A:</strong> No &mdash; keep them side by side in <code>services/</code> for now. Separate folders pay off at a scale we are not at (many services, multiple impls each, a big team). The boundary is already enforced by two things we have: (1) the type everyone uses (<code>AuthService</code>, never the concrete class) and (2) one wiring point (<code>services.dart</code>).</p><div class="callout callout-info"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><div><p><span class="label">Key trick:</span> the interface keeps the original filename <code>auth_service.dart</code>, so every existing <code>import '.../auth_service.dart'</code> still resolves to the type &mdash; <strong>no consumer code changed</strong>. Only two places ever construct an <code>AuthService</code>: <code>services.dart</code> and the unit test.</p></div></div><h2 id="changeset" data-toc="4. The change set (with code)">4. The change set (with code)<a class="anchor" href="#changeset" aria-label="Link to section">#</a></h2><h3 id="cs-interface" data-toc="auth_service.dart — now the interface + exceptions">auth_service.dart — now the interface + exceptions<a class="anchor" href="#cs-interface" aria-label="Link to section">#</a></h3><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">lib/services/auth_service.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>abstract class AuthService {
+  // Primitives — each implementation provides these.
+  User? getCurrentUser();
+  bool isSignedIn();
+  Future&lt;bool&gt; hasValidSession();
+  Stream&lt;AuthState&gt; authStateChanges();
+  Future&lt;void&gt; signInWithGoogle();
+  Future&lt;void&gt; signOut();
+
+  // Derived helpers — shared by all impls, written once.
+  String? getCurrentUserEmail() =&gt; getCurrentUser()?.email;
+  String getCurrentUserId() {
+    final id = getCurrentUser()?.id;
+    if (id == null) throw const NotSignedInException();
+    return id;
+  }
+}</code></pre></div><h3 id="cs-impl" data-toc="supabase_auth_service.dart — the real impl">supabase_auth_service.dart — the real impl<a class="anchor" href="#cs-impl" aria-label="Link to section">#</a></h3><p>The only auth file that imports Supabase.</p><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">lib/services/supabase_auth_service.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>class SupabaseAuthService extends AuthService {
+  SupabaseAuthService({SupabaseClient? client}) : _client = client;
+  final SupabaseClient? _client;
+  SupabaseClient get _supabase =&gt; _client ?? Supabase.instance.client;
+
+  @override bool isSignedIn() =&gt; _supabase.auth.currentSession != null;
+
+  @override
+  Future&lt;bool&gt; hasValidSession() async {
+    if (!isSignedIn()) return false;
+    try {
+      final response = await _supabase.auth.getUser();
+      return response.user != null;
+    } on AuthException {
+      return false;   // expired / deleted
+    }
+  }
+  // ...getCurrentUser, authStateChanges, signInWithGoogle, signOut...
+}</code></pre></div><h3 id="cs-services" data-toc="services.dart — the single place the app commits to Supabase">services.dart — the single place the app commits to Supabase<a class="anchor" href="#cs-services" aria-label="Link to section">#</a></h3><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">lib/services/services.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>static final AuthService auth = SupabaseAuthService(client: _client);</code></pre></div><p>Other services already declared their field as <code>AuthService</code>, so they needed no change. Using <code>extends AuthService</code> (not <code>implements</code>) lets both impls inherit the derived helpers for free.</p><h2 id="testfork" data-toc="5. The test fork — a real decision">5. The test fork — a real decision<a class="anchor" href="#testfork" aria-label="Link to section">#</a></h2><p>The old test relied on the deleted hooks. Its behaviours (e.g. &ldquo;<code>hasValidSession</code> returns false when <code>getUser</code> throws <code>AuthException</code>&rdquo;) are now real-adapter logic inside <code>SupabaseAuthService</code>. Two honest options:</p><div class="tablewrap"><table><thead><tr><th>Option</th><th>Pros</th><th>Cons</th></tr></thead><tbody><tr><td><strong>A</strong> &mdash; Drop the micro-tests; rely on a fake in consumer tests</td><td>No new dependency; fewer lines; common for thin adapters</td><td>Loses direct coverage of the <code>AuthException</code>&rarr;false path</td></tr><tr><td><strong>B</strong> &mdash; Keep coverage with mocktail (mock <code>SupabaseClient</code> + <code>GoTrueClient</code>)</td><td>Keeps exact coverage</td><td>One dev dependency; mock-heavy tests</td></tr></tbody></table></div><div class="callout callout-good"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span><div><p><span class="label">Decision:</span> Option <strong>B</strong> (chosen by the team).</p></div></div><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">test/services/auth_service_test.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>class _MockSupabaseClient extends Mock implements SupabaseClient {}
+class _MockGoTrueClient extends Mock implements GoTrueClient {}
+
+when(() =&gt; client.auth).thenReturn(gotrue);
+when(() =&gt; gotrue.currentSession).thenReturn(_session);
+when(() =&gt; gotrue.getUser()).thenThrow(const AuthException(&#x27;expired&#x27;));
+await expectLater(auth.hasValidSession(), completion(isFalse));</code></pre></div><p>The old <code>signOut</code> assertions were dropped because an earlier refactor already removed that side-effect from <code>hasValidSession</code>.</p><h2 id="diagram" data-toc="6. Before / after">6. Before / after<a class="anchor" href="#diagram" aria-label="Link to section">#</a></h2><div class="diagram"><span class="dlabel">before</span><pre>BEFORE — one class, two tangled brains:
+
+   +------------------------------------------+
+   |               AuthService                |
+   | - _client + 4 fake-hook functions        |
+   | every method: if(hook!=null) fake : real |
+   +------------------------------------------+
+        | real                  | fake
+        v                       v
+   [ Supabase ]           [ test hooks ]</pre></div><div class="diagram"><span class="dlabel">after</span><pre>AFTER — contract + two implementations:
+
+                +-------------------------------+
+                |  &lt;&lt;abstract&gt;&gt;  AuthService    |
+                +-------------------------------+
+                      ^                   ^
+             extends  |                   | extends
+        +----------------------+   +----------------------+
+        | SupabaseAuthService  |   |   FakeAuthService    |
+        +----------------------+   +----------------------+
+                  |                          |
+                  v                          v
+             [ Supabase ]               [ tests ]
+
+   services.dart picks the real one, once.
+   Everyone else depends only on the contract.</pre></div><h2 id="result" data-toc="7. Result &amp; what it unblocks">7. Result &amp; what it unblocks<a class="anchor" href="#result" aria-label="Link to section">#</a></h2><ul><li><code>flutter analyze</code> clean; auth-service + resolver tests pass.</li><li>No consumer code changed; the app names Supabase in exactly <strong>one line</strong>.</li><li><strong>Unblocked Change 02:</strong> with an interface + a ready fake, injecting a fake into the login/onboarding screens becomes trivial.</li></ul><div class="callout callout-info"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><div><p><span class="label">Note:</span> <code>FakeAuthService</code> was added, then removed under <strong>YAGNI</strong> (Change 01&rsquo;s tests use mocktail, not the fake), then re-added in Changes 03/04 when a real consumer test finally needed it. The ladder works in both directions.</p></div></div>
+      <nav class="pagenav"><a href="index.html"><div class="dir">&larr; Previous</div><div class="ttl">00 &middot; Overview &amp; Index</div></a><a class="next" href="02-service-provider-di.html"><div class="dir">Next &rarr;</div><div class="ttl">02 &middot; ServiceProvider DI</div></a></nav>
+      <footer class="foot">
+        <p>Documentation for the <strong>refactor/authentication</strong> work on
+        <a href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener">Jio_Leh</a> ·
+        Flutter + Supabase · Generated from the change write-ups ·
+        <a href="https://github.com/KimiYang951116/jioleh-auth-refactor-docs" target="_blank" rel="noopener">site source</a>.</p>
+      </footer>
+    </div>
+  </main>
+  <aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

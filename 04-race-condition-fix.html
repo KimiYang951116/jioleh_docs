@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 — Race Condition Fix · Jio_Leh Auth Refactor</title>
+<meta name="description" content="The newest async result must win — and don&#x27;t notify after disposal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231d3d28'/><text x='16' y='22' font-size='15' font-family='monospace' font-weight='bold' fill='%2346c47e' text-anchor='middle'>JL</text></svg>">
+<script>try{var t=localStorage.getItem('jl-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body>
+<div id="progress"></div>
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <a class="brand" href="index.html">
+    <span class="logo">JL</span>
+    <span>Jio_Leh <span class="sub">/ Auth Refactor</span></span>
+  </a>
+  <span class="spacer"></span>
+  <nav class="tnav">
+    <a href="index.html">Overview</a>
+    <a href="01-auth-service-interface.html">Changes</a>
+  </nav>
+  <a class="icon-btn" href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener" aria-label="App repository"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+  <button class="icon-btn" id="themeBtn" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+</header>
+<div class="backdrop"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <input id="sideFilter" class="side-filter" type="text" placeholder="Filter sections  ( / )" aria-label="Filter sections">
+    <div class="side-label">Start here</div><a class="nav-link" href="index.html" data-search="Overview &amp; Index 00"><span class="num">00</span><span>Overview &amp; Index</span></a><div class="side-label" style="margin-top:18px">The six changes</div><a class="nav-link" href="01-auth-service-interface.html" data-search="AuthService Interface 01"><span class="num">01</span><span>AuthService Interface</span></a><a class="nav-link" href="02-service-provider-di.html" data-search="ServiceProvider DI 02"><span class="num">02</span><span>ServiceProvider DI</span></a><a class="nav-link" href="03-auth-gate-split.html" data-search="AuthGate Split 03"><span class="num">03</span><span>AuthGate Split</span></a><a class="nav-link active" href="04-race-condition-fix.html" data-search="Race Condition Fix 04"><span class="num">04</span><span>Race Condition Fix</span></a><a class="nav-link" href="05-error-logging.html" data-search="Error Logging 05"><span class="num">05</span><span>Error Logging</span></a><a class="nav-link" href="06-directory-reorganization.html" data-search="Directory Reorg 06"><span class="num">06</span><span>Directory Reorg</span></a>
+  </aside>
+  <main class="content">
+    <div class="content-inner">
+      <div class="crumbs"><a href="index.html">Auth Refactor</a> &nbsp;/&nbsp; 04 · Race Condition Fix</div><span class="eyebrow">Change 04 &middot; Concurrency correctness</span><h1>Race Condition Fix in AuthGateModel.check()</h1><p class="lead">The newest async result must win &mdash; and don&rsquo;t notify after disposal.</p><div class="hero-meta"><span class="chip">Commit <code>6a6dbc7</code></span><span class="chip">2 files changed</span><span class="chip"><span style="color:var(--good)">+53</span>&nbsp;/&nbsp;<span style="color:var(--bad)">&minus;1</span> lines</span><span class="chip">Concurrency correctness</span></div><h2 id="problem" data-toc="1. The problem">1. The problem<a class="anchor" href="#problem" aria-label="Link to section">#</a></h2><p><code>check()</code> is <code>async</code>:</p><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>Future&lt;void&gt; check() async {
+  _setScreen(loading);
+  final result = await resolveAuthGateState(...);   // takes time (network)
+  _setScreen(...);                                   // runs LATER
+}</code></pre></div><p>A <strong>race condition</strong> is when two things run at overlapping times and the final result depends on which finishes <em>last</em> &mdash; which you don&rsquo;t control. The enabler is <code>await</code>: while <code>check()</code> waits on the network, a <em>second</em> <code>check()</code> can start. And <code>check()</code> fires from several places that can land close together:</p><ul><li><code>start()</code> at launch,</li><li>every auth-state change (<code>authStateChanges().listen((_) =&gt; check())</code>),</li><li>onboarding completion (<code>onComplete: _model.check</code>),</li><li>the Retry button.</li></ul><h3 id="bug1" data-toc="Bug #1 — stale overwrite">Bug #1 — stale overwrite<a class="anchor" href="#bug1" aria-label="Link to section">#</a></h3><div class="diagram"><span class="dlabel">the bug</span><pre>A: setScreen(loading); await ...(slow)
+B: setScreen(loading); await ...(fast) → ready → setScreen(MAP)   ✅ newest, correct
+A: ...returns signedOut (stale) → setScreen(LOGIN)                ❌ overwrites!</pre></div><p>The user lands on the login screen although they are logged in, because the <em>older, slower</em> call A finished last and stamped its stale answer over B&rsquo;s correct one. Nothing told A &ldquo;you&rsquo;re out of date.&rdquo;</p><h3 id="bug2" data-toc="Bug #2 — finishing after disposal">Bug #2 — finishing after disposal<a class="anchor" href="#bug2" aria-label="Link to section">#</a></h3><p>If <code>check()</code> is mid-<code>await</code> and the model is disposed (the widget is removed), the await completes and runs <code>_setScreen(...)</code> &rarr; <code>notifyListeners()</code> on a disposed <code>ChangeNotifier</code>:</p><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-lang">text</span><button class="cc-copy" type="button">Copy</button></div><pre class=""><code>A ChangeNotifier was used after being disposed.   → crash</code></pre></div><p>The old widget guarded this with <code>if (!mounted) return</code>; the new model had no such guard (dropped when we moved logic out of the widget).</p><div class="callout callout-warn"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><div><p><span class="label">Root issue:</span> Both bugs are the same root issue: <strong>an async task finishing when its result is no longer wanted</strong> &mdash; either superseded by a newer task, or the owner is gone.</p></div></div><h2 id="options" data-toc="2. Options we discussed (naïve → preferred)">2. Options we discussed (naïve → preferred)<a class="anchor" href="#options" aria-label="Link to section">#</a></h2><div class="tablewrap"><table><thead><tr><th>Level</th><th>Approach</th><th>Pros</th><th>Cons</th><th>Verdict</th></tr></thead><tbody><tr><td>0</td><td>Leave it</td><td>&mdash;</td><td>Occasional wrong screen + possible crash</td><td><span class="verdict v-neutral">The problem</span></td></tr><tr><td>1</td><td>&ldquo;Busy&rdquo; flag &mdash; ignore new checks while one runs</td><td>Tiny</td><td><span class='cons'>Actively wrong</span> &mdash; blocks the NEWEST call (freshest info) and lets the old one stamp a stale result. Makes the race worse.</td><td><span class="verdict v-reject">Harmful</span></td></tr><tr><td>2</td><td>Disposed guard only</td><td>Fixes the crash (#2)</td><td>Does nothing for #1</td><td><span class="verdict v-neutral">Half a fix</span></td></tr><tr><td>3</td><td><strong>Request token + disposed guard</strong></td><td>Fixes both in ~4 lines; no dependency; encodes &ldquo;newest wins&rdquo;; testable</td><td>Must remember the guard after every await (one path here)</td><td><span class="verdict v-chosen">CHOSEN</span></td></tr><tr><td>4</td><td>Real cancellation (<code>CancelableOperation</code>) / stream <code>switchMap</code></td><td>Also cancels wasted in-flight work</td><td>New dependency/concept; overkill &mdash; the token gives the correct result without it</td><td><span class="verdict v-reject">Not chosen</span></td></tr></tbody></table></div><h2 id="fix" data-toc="3. The chosen fix (Level 3)">3. The chosen fix (Level 3)<a class="anchor" href="#fix" aria-label="Link to section">#</a></h2><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">lib/pages/auth/gate/auth_gate_model.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>int _latestCheck = 0;
+bool _disposed = false;
+
+Future&lt;void&gt; check() async {
+  final myCheck = ++_latestCheck;            // claim the newest ticket
+  _setScreen(AuthGateScreen.loading);
+  try {
+    final result = await resolveAuthGateState(...);
+    if (_disposed || myCheck != _latestCheck) return;   // superseded or gone → drop
+    _setScreen(...);
+  } catch (error, stackTrace) {
+    debugPrint(&#x27;AuthGate check failed: $error\n$stackTrace&#x27;);
+    if (_disposed || myCheck != _latestCheck) return;
+    _setScreen(AuthGateScreen.error);
+  }
+}
+
+@override
+void dispose() { _disposed = true; _authChanges?.cancel(); super.dispose(); }</code></pre></div><p>Every <code>check()</code> takes the next ticket number. When it finishes, it writes its result only if it still holds the <em>latest</em> ticket. A newer check that started after it supersedes it; the stale one drops its result.</p><h2 id="trace" data-toc="4. Trace — the fix in action">4. Trace — the fix in action<a class="anchor" href="#trace" aria-label="Link to section">#</a></h2><div class="diagram"><span class="dlabel">newest wins</span><pre>A: myCheck=1, latest=1, loading, await...
+B: myCheck=2, latest=2, loading, await...
+B done: 2 == latest(2) → setScreen(MAP)   ✅
+A done: 1 != latest(2) → DROP              ✅ (no stale overwrite)
++ disposed guard → no crash if the model was thrown away mid-await.</pre></div><h2 id="tests" data-toc="5. Tests">5. Tests<a class="anchor" href="#tests" aria-label="Link to section">#</a></h2><p>Added to <code>auth_gate_model_test.dart</code>, using <code>Completer</code>s so the test controls exactly when each <code>check()</code> finishes:</p><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">test/pages/auth/gate/auth_gate_model_test.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>final completers = &lt;Completer&lt;bool&gt;&gt;[];
+when(() =&gt; account.profileExists()).thenAnswer((_) {
+  final c = Completer&lt;bool&gt;(); completers.add(c); return c.future;
+});
+
+final older = model.check();
+final newer = model.check();
+await pumpEventQueue();          // both now waiting at profileExists()
+
+completers[1].complete(true);    // finish the NEWER first → map
+await pumpEventQueue();
+expect(model.screen, AuthGateScreen.map);
+
+completers[0].complete(false);   // finish the OLDER (stale) → would be onboarding
+await pumpEventQueue();
+expect(model.screen, AuthGateScreen.map);   // unchanged → stale dropped ✅</code></pre></div><p>All model tests pass; <code>flutter analyze</code> clean.</p><h2 id="result" data-toc="6. Result">6. Result<a class="anchor" href="#result" aria-label="Link to section">#</a></h2><ul><li>The newest check always wins; a slow older check can&rsquo;t flip the screen back.</li><li>A check finishing after dispose no longer crashes.</li><li>Because Change 03 had centralized the logic, this fix lived in <strong>one place</strong> &mdash; <code>AuthGateModel.check()</code> &mdash; instead of being scattered in the widget.</li></ul>
+      <nav class="pagenav"><a href="03-auth-gate-split.html"><div class="dir">&larr; Previous</div><div class="ttl">03 &middot; AuthGate Split</div></a><a class="next" href="05-error-logging.html"><div class="dir">Next &rarr;</div><div class="ttl">05 &middot; Error Logging</div></a></nav>
+      <footer class="foot">
+        <p>Documentation for the <strong>refactor/authentication</strong> work on
+        <a href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener">Jio_Leh</a> ·
+        Flutter + Supabase · Generated from the change write-ups ·
+        <a href="https://github.com/KimiYang951116/jioleh-auth-refactor-docs" target="_blank" rel="noopener">site source</a>.</p>
+      </footer>
+    </div>
+  </main>
+  <aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 — Directory Reorganization · Jio_Leh Auth Refactor</title>
+<meta name="description" content="Organize by feature; keep folders cohesive.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231d3d28'/><text x='16' y='22' font-size='15' font-family='monospace' font-weight='bold' fill='%2346c47e' text-anchor='middle'>JL</text></svg>">
+<script>try{var t=localStorage.getItem('jl-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body>
+<div id="progress"></div>
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <a class="brand" href="index.html">
+    <span class="logo">JL</span>
+    <span>Jio_Leh <span class="sub">/ Auth Refactor</span></span>
+  </a>
+  <span class="spacer"></span>
+  <nav class="tnav">
+    <a href="index.html">Overview</a>
+    <a href="01-auth-service-interface.html">Changes</a>
+  </nav>
+  <a class="icon-btn" href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener" aria-label="App repository"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+  <button class="icon-btn" id="themeBtn" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+</header>
+<div class="backdrop"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <input id="sideFilter" class="side-filter" type="text" placeholder="Filter sections  ( / )" aria-label="Filter sections">
+    <div class="side-label">Start here</div><a class="nav-link" href="index.html" data-search="Overview &amp; Index 00"><span class="num">00</span><span>Overview &amp; Index</span></a><div class="side-label" style="margin-top:18px">The six changes</div><a class="nav-link" href="01-auth-service-interface.html" data-search="AuthService Interface 01"><span class="num">01</span><span>AuthService Interface</span></a><a class="nav-link" href="02-service-provider-di.html" data-search="ServiceProvider DI 02"><span class="num">02</span><span>ServiceProvider DI</span></a><a class="nav-link" href="03-auth-gate-split.html" data-search="AuthGate Split 03"><span class="num">03</span><span>AuthGate Split</span></a><a class="nav-link" href="04-race-condition-fix.html" data-search="Race Condition Fix 04"><span class="num">04</span><span>Race Condition Fix</span></a><a class="nav-link" href="05-error-logging.html" data-search="Error Logging 05"><span class="num">05</span><span>Error Logging</span></a><a class="nav-link active" href="06-directory-reorganization.html" data-search="Directory Reorg 06"><span class="num">06</span><span>Directory Reorg</span></a>
+  </aside>
+  <main class="content">
+    <div class="content-inner">
+      <div class="crumbs"><a href="index.html">Auth Refactor</a> &nbsp;/&nbsp; 06 · Directory Reorganization</div><span class="eyebrow">Change 06 &middot; Cohesion by feature</span><h1>Directory Reorganization</h1><p class="lead">Organize by feature; keep folders cohesive.</p><div class="hero-meta"><span class="chip">Commit <code>c7b348f</code></span><span class="chip">21 files changed</span><span class="chip"><span style="color:var(--good)">+50</span>&nbsp;/&nbsp;<span style="color:var(--bad)">&minus;20</span> lines</span><span class="chip">Cohesion by feature</span></div><h2 id="found" data-toc="1. The inconsistencies found">1. The inconsistencies found<a class="anchor" href="#found" aria-label="Link to section">#</a></h2><div class="tablewrap"><table><thead><tr><th>#</th><th>Issue</th><th>Why it's a problem</th></tr></thead><tbody><tr><td>1</td><td><code>pages/</code> used feature folders for <code>auth/</code> and <code>map/</code>, but four pages sat loose at the top level (<code>friends_page</code>, <code>profile_page</code>, <code>profile_edit_page</code>, <code>share_code_page</code>)</td><td>The convention was half-applied; a reader can&rsquo;t tell whether features get a folder</td></tr><tr><td>2</td><td><code>routing/</code> mixed real routing (<code>app_routing.dart</code>) with auth-gate-specific <em>pure logic</em> (<code>auth_gate_resolver.dart</code>, <code>deep_link_parser.dart</code>) used only by auth</td><td><code>routing/</code> wasn&rsquo;t cohesive; auth logic was misfiled</td></tr><tr><td>3</td><td><code>service_provider.dart</code> (an InheritedWidget) lived in <code>services/</code> among plain-Dart service classes</td><td>A kind-mismatch in the folder</td></tr><tr><td>&mdash;</td><td>The <code>auth/</code> folder had grown to 9 flat files</td><td>Messy compared to <code>map/</code>&rsquo;s subfolders</td></tr></tbody></table></div><h2 id="did" data-toc="2. What we did, and the reasoning">2. What we did, and the reasoning<a class="anchor" href="#did" aria-label="Link to section">#</a></h2><h3 id="did1" data-toc="#1 — Group loose pages into feature folders">#1 — Group loose pages into feature folders<a class="anchor" href="#did1" aria-label="Link to section">#</a></h3><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-lang">text</span><button class="cc-copy" type="button">Copy</button></div><pre class=""><code>pages/profile/  ← profile_page, profile_edit_page, share_code_page
+pages/friends/  ← friends_page</code></pre></div><p>Now every feature has a folder; the convention is consistent.</p><h3 id="did2" data-toc="#2 — Move auth-gate logic OUT of routing/">#2 — Move auth-gate logic OUT of routing/<a class="anchor" href="#did2" aria-label="Link to section">#</a></h3><p>A usage search confirmed these two helpers are consumed <strong>only</strong> by auth: <code>auth_gate_resolver.dart</code> (used only by <code>AuthGateModel</code>) and <code>deep_link_parser.dart</code> (used only by <code>ProfileLinkHolder</code>). So they moved next to their consumers, leaving <code>routing/app_routing.dart</code> as genuine navigation. This makes <code>routing/</code> cohesive and co-locates the auth-gate brains.</p><h3 id="did3" data-toc="#3 — service_provider.dart placement (we weighed four homes)">#3 — service_provider.dart placement (we weighed four homes)<a class="anchor" href="#did3" aria-label="Link to section">#</a></h3><div class="tablewrap"><table><thead><tr><th>Option</th><th>Where</th><th>Verdict</th></tr></thead><tbody><tr><td>A &mdash; leave it</td><td><code>services/</code></td><td>Defensible but mixes plain Dart + a widget</td></tr><tr><td>B &mdash; DI folder</td><td><code>lib/di/</code></td><td>Cleanest signal; for a 2nd provider later</td></tr><tr><td>C &mdash; app folder</td><td><code>lib/app/</code> (with <code>app.dart</code>)</td><td><span class="verdict v-chosen">CHOSEN</span> &mdash; both are top-level app wiring mounted at the root</td></tr><tr><td>D &mdash; widgets folder</td><td><code>lib/widgets/</code></td><td>Mislabels DI as a generic widget</td></tr></tbody></table></div><h3 id="byfeature" data-toc="Auth folder — why by-feature, not by-kind">Auth folder — why by-feature, not by-kind<a class="anchor" href="#byfeature" aria-label="Link to section">#</a></h3><p><code>map/</code> uses by-kind subfolders (<code>widgets/</code>, <code>renders/</code>, <code>models/</code>) because it&rsquo;s <em>one</em> screen with supporting parts. Auth is different &mdash; it has <strong>three distinct areas</strong> (gate, login, onboarding) &mdash; so by-sub-feature fits better than copying map&rsquo;s by-kind layout. We extracted the tightest, most-related cluster:</p><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-lang">text</span><button class="cc-copy" type="button">Copy</button></div><pre class=""><code>pages/auth/gate/  ← auth_gate, auth_gate_model, auth_gate_resolver,
+                     deep_link_parser, profile_link_holder</code></pre></div><p><code>login/</code> and <code>onboarding/</code> were left flat &mdash; only two files each, not worth a folder yet (can split later for symmetry).</p><h2 id="mechanics" data-toc="3. Mechanics — how the moves were done safely">3. Mechanics — how the moves were done safely<a class="anchor" href="#mechanics" aria-label="Link to section">#</a></h2><ul><li>Moved files with the filesystem; git detects renames at commit by content similarity, so history is preserved.</li><li>For every move, searched for all imports (<code>package:</code> and relative) and updated them.</li></ul><p><strong>Watch-outs that bit us:</strong></p><ul><li>A test moved one level deeper, so its <em>relative</em> import to the shared fake had to gain a &ldquo;../&rdquo;: <code>../../services/...</code> &rarr; <code>../../../services/...</code></li><li><code>deep_link_parser_test.dart</code> was an <strong>empty stub</strong> (no <code>main()</code>), which breaks the test runner (&ldquo;Undefined name &rsquo;main&rsquo;&rdquo;). We <em>filled</em> it with 5 real tests for <code>profileIdFromDeepLink</code> instead of leaving a broken file.</li><li>After each batch: <code>flutter analyze lib test</code> (clean), then ran the gate tests.</li></ul><h2 id="layout" data-toc="4. Final layout (auth-relevant)">4. Final layout (auth-relevant)<a class="anchor" href="#layout" aria-label="Link to section">#</a></h2><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">lib/ — final</span><span class="cc-lang">text</span><button class="cc-copy" type="button">Copy</button></div><pre class=""><code>lib/
+├─ app/            app.dart, service_provider.dart
+├─ pages/
+│  ├─ auth/
+│  │  ├─ gate/     auth_gate, auth_gate_model, auth_gate_resolver,
+│  │  │            deep_link_parser, profile_link_holder
+│  │  ├─ login_page, login_widgets
+│  │  └─ onboarding_page, onboarding_widgets
+│  ├─ map/
+│  ├─ profile/     profile_page, profile_edit_page, share_code_page
+│  └─ friends/     friends_page
+├─ routing/        app_routing.dart  (navigation only)
+└─ services/       auth_service (interface), supabase_auth_service, + others
+test/pages/auth/gate/  mirrors gate/ (20 tests total, all passing)</code></pre></div><h2 id="notdo" data-toc="5. What we deliberately did NOT do">5. What we deliberately did NOT do<a class="anchor" href="#notdo" aria-label="Link to section">#</a></h2><ul><li>Did not split <code>login/</code> and <code>onboarding/</code> into folders (2 files each; YAGNI).</li><li>Did not adopt a global <code>domain/</code> vs <code>data/</code> split (over-engineering at this size).</li><li>Did not move services into per-feature folders (the flat <code>services/</code> is fine for the current count).</li></ul><h2 id="result" data-toc="6. Result">6. Result<a class="anchor" href="#result" aria-label="Link to section">#</a></h2><ul><li>The tree now answers &ldquo;is this codebase foldered-by-feature?&rdquo; with a clear <strong>yes</strong>.</li><li><code>routing/</code> is honest (navigation only); auth-gate logic is one cohesive cluster.</li><li><code>flutter analyze</code> clean; all 20 gate tests pass after the moves.</li></ul><div class="callout callout-good"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span><div><p><span class="label">Done:</span> That&rsquo;s the whole refactor. Six commits, zero user-facing change, and an auth layer that is now testable, diagnosable, consistent, and organized. Head back to the <a href='index.html'><strong>Overview</strong></a> for the bird&rsquo;s-eye view.</p></div></div>
+      <nav class="pagenav"><a href="05-error-logging.html"><div class="dir">&larr; Previous</div><div class="ttl">05 &middot; Error Logging</div></a><span style="flex:1"></span></nav>
+      <footer class="foot">
+        <p>Documentation for the <strong>refactor/authentication</strong> work on
+        <a href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener">Jio_Leh</a> ·
+        Flutter + Supabase · Generated from the change write-ups ·
+        <a href="https://github.com/KimiYang951116/jioleh-auth-refactor-docs" target="_blank" rel="noopener">site source</a>.</p>
+      </footer>
+    </div>
+  </main>
+  <aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 — Error Logging &amp; Honest Messages · Jio_Leh</title>
+<meta name="description" content="Observability — stop swallowing the cause.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231d3d28'/><text x='16' y='22' font-size='15' font-family='monospace' font-weight='bold' fill='%2346c47e' text-anchor='middle'>JL</text></svg>">
+<script>try{var t=localStorage.getItem('jl-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body>
+<div id="progress"></div>
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <a class="brand" href="index.html">
+    <span class="logo">JL</span>
+    <span>Jio_Leh <span class="sub">/ Auth Refactor</span></span>
+  </a>
+  <span class="spacer"></span>
+  <nav class="tnav">
+    <a href="index.html">Overview</a>
+    <a href="01-auth-service-interface.html">Changes</a>
+  </nav>
+  <a class="icon-btn" href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener" aria-label="App repository"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+  <button class="icon-btn" id="themeBtn" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+</header>
+<div class="backdrop"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <input id="sideFilter" class="side-filter" type="text" placeholder="Filter sections  ( / )" aria-label="Filter sections">
+    <div class="side-label">Start here</div><a class="nav-link" href="index.html" data-search="Overview &amp; Index 00"><span class="num">00</span><span>Overview &amp; Index</span></a><div class="side-label" style="margin-top:18px">The six changes</div><a class="nav-link" href="01-auth-service-interface.html" data-search="AuthService Interface 01"><span class="num">01</span><span>AuthService Interface</span></a><a class="nav-link" href="02-service-provider-di.html" data-search="ServiceProvider DI 02"><span class="num">02</span><span>ServiceProvider DI</span></a><a class="nav-link" href="03-auth-gate-split.html" data-search="AuthGate Split 03"><span class="num">03</span><span>AuthGate Split</span></a><a class="nav-link" href="04-race-condition-fix.html" data-search="Race Condition Fix 04"><span class="num">04</span><span>Race Condition Fix</span></a><a class="nav-link active" href="05-error-logging.html" data-search="Error Logging 05"><span class="num">05</span><span>Error Logging</span></a><a class="nav-link" href="06-directory-reorganization.html" data-search="Directory Reorg 06"><span class="num">06</span><span>Directory Reorg</span></a>
+  </aside>
+  <main class="content">
+    <div class="content-inner">
+      <div class="crumbs"><a href="index.html">Auth Refactor</a> &nbsp;/&nbsp; 05 · Error Logging</div><span class="eyebrow">Change 05 &middot; Observability</span><h1>Error Logging &amp; Honest Messages</h1><p class="lead">Observability &mdash; stop swallowing the cause.</p><div class="hero-meta"><span class="chip">Commit <code>d8dcf32</code></span><span class="chip">2 files changed</span><span class="chip"><span style="color:var(--good)">+9</span>&nbsp;/&nbsp;<span style="color:var(--bad)">&minus;5</span> lines</span><span class="chip">Observability</span></div><h2 id="problem" data-toc="1. The problem">1. The problem<a class="anchor" href="#problem" aria-label="Link to section">#</a></h2><p>Two auth failure points threw away information.</p><h3 id="spot1" data-toc="Spot 1 — AuthPage._signInWithGoogle">Spot 1 — AuthPage._signInWithGoogle<a class="anchor" href="#spot1" aria-label="Link to section">#</a></h3><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>} catch (error) {
+  _showSnackBar(&#x27;Unexpected Error.&#x27;);   // same message for everything;
+}                                        // real cause discarded</code></pre></div><h3 id="spot2" data-toc="Spot 2 — AuthGateModel.check">Spot 2 — AuthGateModel.check<a class="anchor" href="#spot2" aria-label="Link to section">#</a></h3><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>} catch (_) {                            // cause not even named
+  _setScreen(error);
+}</code></pre></div><p>&ldquo;Swallowing an error&rdquo; = catching it and recording it nowhere. The program keeps running, but the <strong>evidence</strong> of what went wrong is destroyed.</p><h3 id="facetA" data-toc="Facet A — you can&#x27;t debug what you can&#x27;t see (observability)">Facet A — you can&#x27;t debug what you can&#x27;t see (observability)<a class="anchor" href="#facetA" aria-label="Link to section">#</a></h3><p>A user says &ldquo;I can&rsquo;t log in, it just says Unexpected Error.&rdquo; Why did it fail? A network timeout? A rejected OAuth? A bad redirect URL? A Supabase error? With no log, you have <strong>nothing</strong> &mdash; the one object that knew (the <code>error</code>) was discarded at the <code>catch</code>.</p><h3 id="facetB" data-toc="Facet B — one message can&#x27;t fit two situations">Facet B — one message can&#x27;t fit two situations<a class="anchor" href="#facetB" aria-label="Link to section">#</a></h3><div class="tablewrap"><table><thead><tr><th>Kind</th><th>Example</th><th>What the user should hear</th></tr></thead><tbody><tr><td>Transient</td><td>Wi-Fi blip, server briefly busy</td><td>&ldquo;Network problem &mdash; try again.&rdquo;</td></tr><tr><td>Real auth failure</td><td>Sign-in rejected, account issue</td><td>&ldquo;Sign-in failed.&rdquo; (retry won&rsquo;t help)</td></tr></tbody></table></div><p>Both produced the same scary, uninformative &ldquo;Unexpected Error.&rdquo; The code <em>had</em> the info (the error type) but discarded it before deciding what to say.</p><div class="callout callout-warn"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><div><p><span class="label">Smell:</span> catching <em>everything</em> and reacting identically conflates explainable errors, retryable errors, and genuine bugs &mdash; and a swallowed bug can hide for months.</p></div></div><h2 id="decided" data-toc="2. What we decided (and a subtlety that simplified Facet B)">2. What we decided (and a subtlety that simplified Facet B)<a class="anchor" href="#decided" aria-label="Link to section">#</a></h2><p>Fix applied:</p><ul><li><strong>Always log</strong> the real cause + stack trace (Facet A &mdash; the most important).</li><li>Give an <strong>honest, actionable</strong> message instead of &ldquo;Unexpected Error&rdquo;.</li></ul><div class="callout callout-info"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span><div><p><span class="label">Subtlety on Facet B:</span> on mobile, <code>signInWithGoogle</code> <em>throwing here</em> means the OAuth flow could not <em>start</em> (a launch/connectivity issue). An actual Google <em>rejection</em> does not throw here &mdash; it arrives later via the auth stream. So a connection-oriented message (&ldquo;check your connection and try again&rdquo;) is the <strong>correct</strong> one, and we did <em>not</em> need a transient-vs-auth type split in the UI. We deliberately did not over-build this.</p></div></div><p><strong>Why <code>debugPrint</code>:</strong> simplest, idiomatic Flutter logging, fine for a student project; can be swapped for a logger / <code>dart:developer log</code> later.</p><h2 id="changeset" data-toc="3. The change set">3. The change set<a class="anchor" href="#changeset" aria-label="Link to section">#</a></h2><h3 id="cs-login" data-toc="login_page.dart">login_page.dart<a class="anchor" href="#cs-login" aria-label="Link to section">#</a></h3><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">lib/pages/auth/login_page.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>} catch (error, stackTrace) {
+  debugPrint(&#x27;Google sign-in failed: $error\n$stackTrace&#x27;);
+  if (mounted) {
+    _showSnackBar(&#x27;Could not start sign-in. Check your connection and try again.&#x27;);
+  }
+}</code></pre></div><h3 id="cs-model" data-toc="auth_gate_model.dart">auth_gate_model.dart<a class="anchor" href="#cs-model" aria-label="Link to section">#</a></h3><div class="codecard"><div class="cc-head"><span class="cc-dots"><i></i><i></i><i></i></span><span class="cc-name">lib/pages/auth/gate/auth_gate_model.dart</span><span class="cc-lang">dart</span><button class="cc-copy" type="button">Copy</button></div><pre class="hl"><code>} catch (error, stackTrace) {
+  debugPrint(&#x27;AuthGate check failed: $error\n$stackTrace&#x27;);
+  if (_disposed || myCheck != _latestCheck) return;
+  _setScreen(AuthGateScreen.error);
+}</code></pre></div><p>Logging happens <em>before</em> the stale/disposed guard, so even a dropped check&rsquo;s error is recorded.</p><h2 id="diagram" data-toc="4. Before / after">4. Before / after<a class="anchor" href="#diagram" aria-label="Link to section">#</a></h2><div class="diagram"><span class="dlabel">before → after</span><pre>BEFORE: error → catch → [cause discarded] + &quot;Unexpected Error&quot; (always)
+AFTER : error → catch → log(cause + stack) → honest, actionable message</pre></div><h2 id="result" data-toc="5. Result">5. Result<a class="anchor" href="#result" aria-label="Link to section">#</a></h2><ul><li>Failures are now logged with a stack trace &rarr; a &ldquo;login broken&rdquo; report is diagnosable.</li><li>The login message is honest about the real situation (couldn&rsquo;t <em>start</em> the flow = connectivity) instead of an uninformative &ldquo;Unexpected Error&rdquo;.</li><li>The error-screen unit test now also exercises the logging path (the &ldquo;network down&rdquo; line in test output is the <code>debugPrint</code> working as intended).</li></ul>
+      <nav class="pagenav"><a href="04-race-condition-fix.html"><div class="dir">&larr; Previous</div><div class="ttl">04 &middot; Race Condition Fix</div></a><a class="next" href="06-directory-reorganization.html"><div class="dir">Next &rarr;</div><div class="ttl">06 &middot; Directory Reorg</div></a></nav>
+      <footer class="foot">
+        <p>Documentation for the <strong>refactor/authentication</strong> work on
+        <a href="https://github.com/KimiYang951116/JioLeh" target="_blank" rel="noopener">Jio_Leh</a> ·
+        Flutter + Supabase · Generated from the change write-ups ·
+        <a href="https://github.com/KimiYang951116/jioleh-auth-refactor-docs" target="_blank" rel="noopener">site source</a>.</p>
+      </footer>
+    </div>
+  </main>
+  <aside class="toc" id="toc"></aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>
