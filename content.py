@@ -1017,3 +1017,942 @@ test/pages/auth/gate/  mirrors gate/ (20 tests total, all passing)''', name="lib
                      "diagnosable, consistent, and organized. Head back to the "
                      "<a href='index.html'><strong>Overview</strong></a> for the bird&rsquo;s-eye view.", "good", "Done:"))
     return "".join(b)
+
+
+# ======================================================================
+# ======================================================================
+#   BOOK 2 — AUTH & PROFILE WIDGET REFACTOR  (PR #123)
+#   Source: design-notes docs 00–11. Each change page keeps the doc's
+#   Context -> Problem -> Options -> Decision -> What changed ->
+#   Trade-offs -> Result structure as semantic HTML.
+# ======================================================================
+# ======================================================================
+
+PR_URL = "https://github.com/KimiYang951116/JioLeh/pull/123"
+
+def wcrumbs(label):
+    return ('<div class="crumbs"><a href="widget-refactor.html">Widget Refactor</a> '
+            '&nbsp;/&nbsp; %s</div>' % esc(label))
+
+def wmeta(*chips_html):
+    return '<div class="hero-meta">%s</div>' % "".join(chips_html)
+
+def wcard(num, fn, title, desc, tag):
+    return ('<a class="card" href="%s">'
+            '<div class="cnum">CHANGE %s</div>'
+            '<div class="ctitle">%s</div>'
+            '<div class="cdesc">%s</div>'
+            '<div class="cstat"><span class="muted">%s</span></div>'
+            '</a>' % (fn, num, title, desc, tag))
+
+# ======================================================================
+# W00 — OVERVIEW
+# ======================================================================
+TITLE_W00 = "Auth & Profile Widget Refactor — Jio_Leh Engineering Notes"
+DESC_W00 = ("A design log of the Jio_Leh auth/profile widget refactor: the 4-layer model, "
+            "every option weighed, the trade-offs and the reasoning behind each decision.")
+
+def body_w00():
+    b = []
+    b.append('<div class="hero">')
+    b.append('<span class="eyebrow">refactor/auth-frontend &middot; June 2026 &middot; PR #123</span>')
+    b.append('<h1>The Auth &amp; Profile Widget Refactor, in full</h1>')
+    b.append('<p class="lead">Not just <em>what</em> changed in the auth/profile widget layer, but the full reasoning '
+             'behind each decision &mdash; the problem, the options weighed, the trade-offs, and why we chose what we chose. '
+             'A design log so future contributors (and future us) understand the <em>why</em>, not only the diff.</p>')
+    b.append(wmeta(
+        chip('Branch <code>refactor/auth-frontend</code>'),
+        chip('<a href="%s" target="_blank" rel="noopener">PR #123</a>' % PR_URL),
+        chip('Jio_Leh &middot; Flutter'),
+        chip('Design-system rebuild')))
+    b.append('</div>')
+
+    b.append('<div class="statgrid">'
+             '<div class="statbox"><div class="n">11</div><div class="l">focused changes</div></div>'
+             '<div class="statbox"><div class="n">50</div><div class="l">tests passing (50/50)</div></div>'
+             '<div class="statbox"><div class="n">0</div><div class="l">analyzer warnings</div></div>'
+             '<div class="statbox"><div class="n">1</div><div class="l">intentional visual change</div></div>'
+             '</div>')
+
+    b.append(callout(
+        "Read the changes in order &mdash; the foundation (theme tokens, then field atoms) comes first, and every screen "
+        "is rebuilt on top of it. Each change has its own page with the same shape: context, the options weighed, the "
+        "decision and its rationale, the trade-offs, and the result.", "info", "How to read this"))
+
+    b.append(h2("big-picture", "The big picture"))
+    b.append('<p>Starting point: the widget layer was <strong>bimodal</strong>. A few areas were cleanly factored '
+             '(the AuthGate split, MapToolbar, <code>login_widgets</code>), but several screens were 300&ndash;550-line '
+             '<strong>monoliths</strong> where layout, styling, form state, validation, and service calls were all crammed '
+             'into one <code>build()</code> method. The same styled input box was hand-rolled 7+ times; hex colors, corner '
+             'radii, and shadows were scattered across files; and the birthday parser was duplicated in two screens and had '
+             '<em>silently diverged</em>.</p>')
+    b.append(callout(
+        "The single biggest root cause was <strong>not</strong> file length &mdash; it was the <strong>absence of a "
+        "design-system layer</strong>. That is what made everything long <em>and</em> fragile.", "bulb", "Root cause:"))
+    b.append('<p><strong>Strategy:</strong> build the foundation first (tokens + reusable atoms), then rebuild the screens '
+             'on top of it, one feature at a time, every step ending on a green build (<code>flutter analyze</code> + tests). '
+             'Auth was done first, then Profile.</p>')
+
+    b.append(h2("model", "The 4-layer mental model (the spine of every decision)"))
+    b.append('<ol>'
+             '<li><strong>Page / controller</strong> (a <code>StatefulWidget</code>) &mdash; owns state, controllers, '
+             'service calls, navigation. Its <code>build()</code> is thin: it only composes.</li>'
+             '<li><strong>Section widgets</strong> (a <code>StatelessWidget</code> per screen area) &mdash; take data + '
+             'callbacks, render layout, hold no logic.</li>'
+             '<li><strong>Design-system atoms</strong> (app-wide reusable widgets) &mdash; <code>AppTextField</code>, '
+             '<code>AppPrimaryButton</code>, <code>AppSectionLabel</code>, <code>AppFieldBox</code>.</li>'
+             '<li><strong>Theme tokens</strong> (<code>theme.dart</code>, no widgets) &mdash; colors, radii, spacing, shadows.</li>'
+             '</ol>')
+    b.append('<p>Plus: non-widget logic (validation, parsing) lives in plain Dart, never in a widget.</p>')
+    b.append(callout(
+        "A widget class should do exactly <strong>one</strong> of these jobs. When a class does two, that is the seam to "
+        "cut along.", "bulb", "Rule of thumb:"))
+
+    b.append(h2("changes", "The eleven changes"))
+    b.append('<div class="cards">'
+             + wcard("01", "widget-01-theme-tokens.html", "Theme Tokens",
+                     "Tokenize colors, radii, shadows, heights so a value lives once.", "Foundation")
+             + wcard("02", "widget-02-field-atoms.html", "Field Atoms",
+                     "AppSectionLabel, AppFieldBox, AppTextField &mdash; the building blocks.", "Extract an atom")
+             + wcard("03", "widget-03-birthday-row.html", "BirthdayRow",
+                     "The day/month/year row both screens share &mdash; then unified.", "Shared widget")
+             + wcard("04", "widget-04-onboarding-widgets.html", "onboarding_widgets on atoms",
+                     "A ~215-line build() becomes ~45 lines of composed atoms.", "Composition")
+             + wcard("05", "widget-05-app-primary-button.html", "AppPrimaryButton",
+                     "The forest CTA atom that owns its own loading spinner.", "Rule of three")
+             + wcard("06", "widget-06-login-widgets.html", "login_widgets tokenization",
+                     "Strip raw hex &mdash; and decline to merge the Google button.", "Don&rsquo;t over-generalize")
+             + wcard("07", "widget-07-login-snackbar.html", "login_page snackbar",
+                     "The smallest change; tokenize repetition, leave one-offs.", "One-offs stay inline")
+             + wcard("08", "widget-08-username-rule.html", "UsernameRule",
+                     "One rule object so hint, formatters, and regex can&rsquo;t disagree.", "Single source of truth")
+             + wcard("09", "widget-09-birthday-merge.html", "Birthday merge",
+                     "One strict parser kills two silent bugs; share pieces, not forms.", "Unify to the stronger")
+             + wcard("10", "widget-10-profile-edit.html", "profile_edit on atoms",
+                     "The biggest monolith (~510 lines) more than halves.", "Compose")
+             + wcard("11", "widget-11-relocate-onboarding.html", "Relocate onboarding",
+                     "Move onboarding next to the profile code it shares with.", "What changes together")
+             + '</div>')
+
+    b.append(h2("principles", "Cross-cutting principles that recur"))
+    b.append('<ul>'
+             '<li><strong>No magic values in widgets</strong> &mdash; hex, radii, shadows, heights, font sizes are tokens in '
+             '<code>theme.dart</code>. One-off values used once may stay inline.</li>'
+             '<li><strong>App* prefix on token classes</strong> to avoid collisions with Flutter (a class named '
+             '<code>Radius</code> collides with <code>material.dart</code>).</li>'
+             '<li><strong>Rule of three</strong> &mdash; do not abstract until something repeats a third time.</li>'
+             '<li><strong>An atom must not drag in unrelated atoms</strong> (a field does not own its label; the form stacks '
+             'them as siblings).</li>'
+             '<li><strong>Small steps, each ending green.</strong> Never stack a refactor on a red build.</li>'
+             '<li><strong>Composition over flag-driven mega-widgets</strong> (the &ldquo;boolean Frankenstein&rdquo;).</li>'
+             '<li><strong>Organize by &ldquo;what changes together&rdquo;</strong> (this drove the onboarding relocation).</li>'
+             '</ul>')
+
+    b.append(h2("baseline", "Verification baseline"))
+    b.append(callout(
+        "Every step finished with <code>flutter analyze</code> = <em>No issues found</em>, and the full suite "
+        "<code>flutter test</code> = <strong>50/50 passing</strong>. The refactor was behavior-preserving except for "
+        "deliberate fixes (birthday validation, stricter birthday input) and one intentional visual change (field corner "
+        "radius unified 18 &rarr; 16).", "good", "Green throughout:"))
+    b.append(callout('Start with <a href="widget-01-theme-tokens.html"><strong>Change 01 &mdash; Theme Tokens</strong></a>. '
+                     'Each page ends with a link to the next.', "info", "Next:"))
+    return "".join(b)
+
+# ======================================================================
+# W01 — THEME TOKENS
+# ======================================================================
+TITLE_W01 = "01 — Theme Tokens · Jio_Leh Widget Refactor"
+DESC_W01 = "The foundation: tokenize colors, radii, shadows, and heights so each value lives once."
+
+def body_w01():
+    b = [wcrumbs("01 · Theme Tokens")]
+    b.append('<span class="eyebrow">Change 01 &middot; The foundation</span>')
+    b.append('<h1>Theme Tokens</h1>')
+    b.append('<p class="lead">The foundation &mdash; every later change references these tokens instead of raw values.</p>')
+    b.append(wmeta(chip('File <code>lib/theme.dart</code>'),
+                   chip('No magic values'),
+                   chip('Behaviour-preserving (1 visual delta)')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p>The app already had <code>AppColors</code> and <code>AppTextSizes</code> &mdash; proof the team understood '
+             'the &ldquo;define a value once&rdquo; idea. But many values had <em>escaped</em> into widgets: the input-box '
+             'shadow ' + cc("Color(0x0F1E1B16)") + ' appeared <strong>7 times</strong> across onboarding and profile_edit; '
+             'corner radii (16, 18) and button heights (54, 55) were magic numbers; near-black/grey button and text colors '
+             'were raw hex.</p>')
+
+    b.append(h2("problem", "2. The problem"))
+    b.append('<p>A token that escapes into widgets defeats the point: change the brand shadow and you must hunt 7 files and '
+             'will likely miss one. Magic numbers carry no meaning at the call site (is &ldquo;16&rdquo; a radius, a gap, a '
+             'font size?).</p>')
+
+    b.append(h2("changed", "3. What changed"))
+    b.append('<p>Added token classes to <code>theme.dart</code> (final state):</p>')
+    b.append(code(r'''
+AppRadii         { elements = 16.0 }
+AppShadows       { field   = [BoxShadow(0x0F1E1B16, blur 24, offset (0,8))] }
+AppFieldHeights  { single  = 55.0 }
+AppButtonHeights { primary = 54.0 }''', name="lib/theme.dart — new token classes", lang="text"))
+    b.append('<p>Added semantic colors to <code>AppColors</code> (added across the whole refactor):</p>')
+    b.append('<ul>'
+             '<li><code>disabledButton</code> 0xFF4B443B</li>'
+             '<li><code>darkButton</code> 0xFF211D18 (Google sign-in face)</li>'
+             '<li><code>danger</code> 0xFFD84B3A + <code>dangerShadow</code> 0xFF9E2F24 (delete account)</li>'
+             '<li><code>taglineText</code> 0xFF776F65, <code>authBodyText</code> 0xFF7A736A (login greys)</li>'
+             '</ul>')
+    b.append('<p>Renamed <code>onboardingSubtitle</code> &rarr; <code>lightSubtitle</code>.</p>')
+
+    b.append(h2("decisions", "4. Decisions, options & trade-offs"))
+    b.append(h3("d-naming", "(a) Naming — collision with Flutter"))
+    b.append('<p>The first attempt named the radius class <code>Radius</code>. Flutter&rsquo;s <code>material.dart</code> '
+             '<em>already</em> exports a <code>Radius</code> class (used by <code>BorderRadius</code>). Declaring our own in '
+             'a file that imports material makes any later reference to <code>Radius</code> ambiguous &rarr; a compile error '
+             'in any file importing both.</p>')
+    b.append(callout("all token classes use the <code>App*</code> prefix (<code>AppRadii</code>, <code>AppShadows</code>). "
+                     "This matches the existing <code>AppColors</code>/<code>AppTextSizes</code> and never collides.",
+                     "good", "Decision:"))
+    b.append(h3("d-double", "(b) int vs double"))
+    b.append('<p>' + cc("elements = 16") + ' is typed <code>int</code>; <code>BorderRadius.circular</code> wants a '
+             '<code>double</code>, so passing it errors. Decision: write <code>16.0</code>.</p>')
+    b.append(h3("d-radius", "(c) One radius vs two (field 18 vs button 16)"))
+    b.append('<p>The original code used 18 for fields and 16 for buttons. We unified to a single '
+             '<code>AppRadii.elements = 16</code>.</p>')
+    b.append(table(["", "", ""], [
+        ['<span class="pros">PRO</span>', "One knob &mdash; simpler, consistent.", ""],
+        ['<span class="cons">CON</span>', "Input fields become slightly squarer (18 &rarr; 16) &mdash; a real, if subtle, "
+         "visual change. We accepted it knowingly and flagged it for visual review.", ""],
+    ]))
+    b.append(h3("d-howmuch", "(d) How much to tokenize"))
+    b.append('<p>We deliberately did <strong>not</strong> tokenize genuinely one-off values (e.g. the login sign-in '
+             'panel&rsquo;s unique radius 20, the snackbar&rsquo;s radius 10). Over-tokenizing single-use values adds '
+             'indirection without payoff.</p>')
+    b.append(callout("tokenize what <em>repeats</em> or carries shared meaning; leave true one-offs inline.",
+                     "bulb", "Principle:"))
+    b.append(h3("d-rename", "(e) The rename ripple (a lesson)"))
+    b.append('<p>Renaming <code>onboardingSubtitle</code> &rarr; <code>lightSubtitle</code> broke <strong>8 references</strong> '
+             'across two files. Renaming a <em>public</em> symbol is a <strong>global</strong> action; its blast radius is '
+             'every file that uses it. Use the IDE &ldquo;Rename Symbol&rdquo; (F2) so the definition and all references move '
+             'together; doing it by hand invites drift.</p>')
+    b.append(callout("the rename was scope-creep inside a step meant only to add tokens &mdash; a reminder that each step "
+                     "should do one thing.", "warn", "Also:"))
+
+    b.append(h2("height-required", "5. Why token heights became “required, no default”"))
+    b.append('<p>See <a href="widget-02-field-atoms.html">Change 02</a> &mdash; <code>AppFieldBox.height</code> was made '
+             'required (no default 55) and the literal 55 became <code>AppFieldHeights.single</code>, on the principle that '
+             'the caller should be explicit and no magic number should live in a widget.</p>')
+
+    b.append(h2("result", "6. Result"))
+    b.append(callout("Every later change references these tokens instead of raw values. Changing the field shadow, a radius, "
+                     "or a button height is now a <strong>one-line edit</strong>.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W02 — FIELD ATOMS
+# ======================================================================
+TITLE_W02 = "02 — Field Atoms · Jio_Leh Widget Refactor"
+DESC_W02 = "Three composable atoms: AppSectionLabel, AppFieldBox, AppTextField."
+
+def body_w02():
+    b = [wcrumbs("02 · Field Atoms")]
+    b.append('<span class="eyebrow">Change 02 &middot; Extract an atom</span>')
+    b.append('<h1>Field Atoms</h1>')
+    b.append('<p class="lead">The styled white input box and the grey section label &mdash; hand-rolled ~7&times; each '
+             '&mdash; become three composable atoms.</p>')
+    b.append(wmeta(chip('Files <code>app_section_label.dart</code> · <code>app_field_box.dart</code> · <code>app_text_field.dart</code>'),
+                   chip('Layer 3 — design-system atoms')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p>The styled &ldquo;white input box&rdquo; (white fill, radius, soft shadow, height 55, borderless '
+             '<code>TextField</code>, grey bold hint) was hand-rolled ~7&times;. The grey uppercase section label '
+             '(&ldquo;USER ID&rdquo;, &ldquo;DISPLAY NAME&rdquo;) was hand-rolled ~7&times;. These are the textbook '
+             '&ldquo;extract an atom&rdquo; candidates (layer 3 of the model).</p>')
+
+    b.append(h2("label", "2. Atom 1 — AppSectionLabel"))
+    b.append('<p>The small grey bold label. It takes one positional <code>String</code>, computes its own scaled font size '
+             'internally, applies <code>AppColors.lightSubtitle</code>, and has a <code>const</code> constructor.</p>')
+    b.append(callout(
+        "<strong>positional vs named</strong> params (<code>{}</code>) &mdash; named for readability, positional only for "
+        "the single primary value (like <code>Text(\"hi\")</code>). And <code>this.text</code> is Dart&rsquo;s "
+        "&ldquo;initializing formal&rdquo; shorthand for <code>: text = text</code>; <code>super.key</code> is shorthand "
+        "for <code>: super(key: key)</code> &mdash; not &ldquo;no assignment&rdquo;, the assignment is folded into the "
+        "syntax.", "info", "Lesson — constructors:"))
+
+    b.append(h2("key-question", "3. The key design question — does AppTextField include the outer box?"))
+    b.append('<p>The white box is used by the <strong>text fields</strong> <em>and</em> by the month '
+             '<strong>dropdown</strong> (a <code>DropdownButton</code>, not a <code>TextField</code>). That is the deciding '
+             'fact.</p>')
+    b.append(table(["Option", "Pros", "Cons", "Verdict"], [
+        ["<strong>A</strong> &mdash; <code>AppTextField</code> bakes the box in",
+         "Shortest call for the common case.",
+         "The month dropdown cannot reuse the box &rarr; it must hand-roll its own white box again &rarr; the shadow/radius "
+         "duplication returns.", RJ()],
+        ["<strong>B</strong> &mdash; box is its own atom (<code>AppFieldBox</code>); <code>AppTextField</code> wraps it",
+         "The box exists once; both <code>AppTextField</code> and the dropdown wrap it &rarr; zero duplication.",
+         "One more widget, one more nesting layer.", CH()],
+    ]))
+    b.append(callout("Option <strong>B</strong>. The evidence (a non-<code>TextField</code> consumer &mdash; the dropdown) "
+                     "was already on the table, so we went one level deeper now rather than regretting it later. "
+                     "<strong>When one visual is shared by two different contents, that visual deserves its own layer.</strong>",
+                     "bulb", "Decision:"))
+
+    b.append(h2("mistake", "4. A mistake we corrected (a good teaching moment)"))
+    b.append('<p>The first draft of <code>AppTextField</code> took an <code>AppSectionLabel</code> as a parameter (and '
+             'never used it). Two problems: (1) a dead param; (2) it was conceptually wrong &mdash; the label and the field '
+             'are <strong>siblings</strong> stacked vertically by the form, not parent/child. An atom must not drag in an '
+             'unrelated atom. The box styling had also been dropped entirely, defeating the atom&rsquo;s whole reason to '
+             'exist. Corrected: removed the label param, restored the box (via <code>AppFieldBox</code>), renamed to match '
+             'purpose.</p>')
+
+    b.append(h2("api", "5. AppFieldBox & AppTextField — the API decisions"))
+    b.append('<ul>'
+             '<li><strong>AppFieldBox</strong>: holds any child + a height. <code>height</code> was made <strong>required</strong> '
+             '(no default) &mdash; force the caller to be explicit, and never bury a magic number (55) inside the widget. The '
+             'literal became <code>AppFieldHeights.single</code>.</li>'
+             '<li><strong>AppTextField</strong>: required <code>controller</code> + <code>hintText</code>; optional '
+             '<code>keyboardType</code>, <code>inputFormatters</code>; <code>height</code> defaults to '
+             '<code>AppFieldHeights.single</code>; <code>maxLines = 1</code>.</li>'
+             '<li>The <strong>&ldquo;multiline&rdquo; boolean was removed</strong>. Each taller field will differ, so a single '
+             'multiline flag/height is the wrong abstraction &mdash; callers pass their own height (e.g. BIO passes 110, '
+             '<code>maxLines: null</code>). This favours explicit per-field sizing over a guessed default.</li>'
+             '</ul>')
+
+    b.append(h2("tradeoffs", "6. Trade-offs"))
+    b.append('<ul>'
+             '<li>Separating <code>AppFieldBox</code> adds a layer &mdash; accepted because it removes real duplication and '
+             'enables the dropdown to share styling.</li>'
+             '<li>Dropping the multiline default means callers must size tall fields themselves; BIO&rsquo;s 110 is currently '
+             'an inline literal (a conscious, single-use exception to the no-magic-number rule).</li>'
+             '</ul>')
+
+    b.append(h2("result", "7. Result"))
+    b.append(callout("<code>lib/widgets/</code> now holds three composable atoms; <code>flutter analyze</code> is clean. "
+                     "These become the building blocks every screen is rebuilt from.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W03 — BIRTHDAYROW
+# ======================================================================
+TITLE_W03 = "03 — BirthdayRow · Jio_Leh Widget Refactor"
+DESC_W03 = "Extract the day/month/year row both screens share — then unify to the stronger version."
+
+def body_w03():
+    b = [wcrumbs("03 · BirthdayRow")]
+    b.append('<span class="eyebrow">Change 03 &middot; Shared widget (+ later unify)</span>')
+    b.append('<h1>BirthdayRow</h1>')
+    b.append('<p class="lead">The one sub-section genuinely identical across onboarding and profile_edit &mdash; a true '
+             'shared widget, not a forced abstraction.</p>')
+    b.append(wmeta(chip('File <code>lib/widgets/birthday_row.dart</code>'),
+                   chip('Two passes'),
+                   chip('Rule of three (revisited)')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p>Both onboarding and profile_edit had an identical day/month/year input row: two number fields (DD, YYYY) '
+             'flanking a month dropdown, all in the styled box. This is the one sub-section that is genuinely the same across '
+             'both screens, so it is a true shared widget (layer 2/3), not a forced abstraction.</p>')
+
+    b.append(h2("changed", "2. What changed (in two passes)"))
+    b.append('<p><strong>Pass 1</strong> (during onboarding work): extracted <code>BirthdayRow</code> taking '
+             '<code>dayController</code>, <code>yearController</code>, <code>selectedMonth</code>, <code>months</code>, '
+             '<code>onMonthChanged</code>. DD/YYYY built from <code>AppTextField</code>; the month dropdown built from '
+             '<code>AppFieldBox</code> + <code>DropdownButton</code> &mdash; which is exactly why <code>AppFieldBox</code> '
+             'was split out as its own atom (see <a href="widget-02-field-atoms.html">02</a>).</p>')
+    b.append('<p><strong>Pass 2</strong> (during the birthday merge, see <a href="widget-09-birthday-merge.html">09</a>): '
+             'dropped the <code>months</code> param and used the shared <code>kMonthNames</code> directly; added digit-only + '
+             'length formatters (DD max 2, YYYY max 4).</p>')
+
+    b.append(h2("decisions", "3. Design decisions & trade-offs"))
+    b.append(h3("d-label", "(a) The label stays out"))
+    b.append('<p>The &ldquo;BIRTHDAY&rdquo; label is <strong>not</strong> part of <code>BirthdayRow</code>; the form places '
+             'the label above the row (same sibling principle as <code>AppTextField</code>). <code>BirthdayRow</code> is just '
+             'the 3-field row.</p>')
+    b.append(h3("d-dropdown", "(b) Should the month dropdown be its own widget?"))
+    b.append('<p>Asked explicitly. <strong>Decision: not yet</strong> (rule of three). The dropdown has exactly <em>one</em> '
+             'consumer &mdash; <code>BirthdayRow</code> &mdash; even after profile_edit also uses <code>BirthdayRow</code> '
+             '(it still lives in one place). Abstracting a one-use widget adds a layer for no gain.</p>')
+    b.append(callout("when a second, non-birthday dropdown needs the same styled-box look. Then extract a generic "
+                     "<code>AppDropdownField&lt;T&gt;</code> (not month-specific) that serves all dropdowns at once.",
+                     "info", "When to revisit:"))
+    b.append(h3("d-months", "(c) Dropping the months param"))
+    b.append('<p>The month list is identical everywhere; it is not a value the caller should supply. Using the shared '
+             '<code>kMonthNames</code> internally removes a needless param from <code>BirthdayRow</code> and from '
+             '<code>ProfileForm</code>. (This cascaded: onboarding_page and profile_edit stopped passing it; the widget test '
+             'stopped passing it.)</p>')
+    b.append(h3("d-limits", "(d) Unifying the input limits"))
+    b.append('<p>profile_edit&rsquo;s DD/YYYY had digit-only + length limits; onboarding&rsquo;s did not. Putting the limits '
+             '<em>into</em> <code>BirthdayRow</code> gives both screens the stricter, better behaviour.</p>')
+    b.append(callout("when merging duplicates, unify to the <strong>stronger</strong> version, not the weaker.",
+                     "bulb", "Principle:"))
+
+    b.append(h2("cons", "4. Cons / notes"))
+    b.append('<ul>'
+             '<li>Onboarding&rsquo;s birthday input behaviour changed (now digit-only, length-limited). This is an intentional '
+             'improvement and consistency win, but it <em>is</em> a behaviour change worth eyeballing.</li>'
+             '<li>The month dropdown reuses <code>AppFieldBox</code> but adds an inner horizontal padding; that styling lives '
+             'in <code>BirthdayRow</code>, acceptable as the single definition.</li>'
+             '</ul>')
+
+    b.append(h2("result", "5. Result"))
+    b.append(callout("One <code>BirthdayRow</code> used by both screens; the month list and input rules have a single home. "
+                     "Widget tests (overflow across 3 screen sizes) still green.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W04 — ONBOARDING_WIDGETS ON ATOMS
+# ======================================================================
+TITLE_W04 = "04 — onboarding_widgets on atoms · Jio_Leh Widget Refactor"
+DESC_W04 = "Kill the TODO: a ~215-line build() becomes ~45 lines of composed atoms."
+
+def body_w04():
+    b = [wcrumbs("04 · onboarding_widgets on atoms")]
+    b.append('<span class="eyebrow">Change 04 &middot; Compose, don&rsquo;t hand-roll</span>')
+    b.append('<h1>onboarding_widgets rebuilt on atoms</h1>')
+    b.append('<p class="lead">ProfileForm&rsquo;s ~215-line <code>build()</code> of hand-rolled label+box pairs becomes ~45 '
+             'lines that read like a table of contents.</p>')
+    b.append(wmeta(chip('File <code>lib/pages/profile/onboarding_widgets.dart</code>'),
+                   chip('~215 &rarr; ~45 lines'),
+                   chip('Composition')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p><code>ProfileForm</code> carried an explicit TODO from the author:</p>')
+    b.append(callout("&ldquo;Containing way too much params and overcomplicated; shld change method of feeding params or "
+                     "seperate to smaller widgets.&rdquo;", "quote", ""))
+    b.append('<p>Its <code>build()</code> was ~215 lines of hand-rolled label+box pairs for USER ID, YOUR NAME, and the '
+             'birthday row.</p>')
+
+    b.append(h2("changed", "2. What changed"))
+    b.append('<p>Replaced every hand-rolled label with <code>AppSectionLabel</code>, every hand-rolled box with '
+             '<code>AppTextField</code>, and the whole birthday row with <code>BirthdayRow</code>. <code>build()</code> '
+             'dropped from ~215 lines to ~45 and now reads like a table of contents:</p>')
+    b.append(code(r'''
+AppSectionLabel("USER ID")
+AppTextField(controller: usernameController, hintText: ..., inputFormatters: ...)
+AppSectionLabel("YOUR NAME")
+AppTextField(controller: displayNameController, hintText: ...)
+AppSectionLabel("BIRTHDAY · OPTIONAL")
+BirthdayRow(...)''', name="onboarding_widgets.dart — build() after"))
+    b.append('<p><code>WelcomeHeader</code> was left untouched (already clean).</p>')
+
+    b.append(h2("todo", "3. On the TODO (“too many params”)"))
+    b.append('<p>The TODO has two halves:</p>')
+    b.append('<ol>'
+             '<li>&ldquo;separate into smaller widgets&rdquo; &mdash; <strong>done</strong> (BirthdayRow extracted, atoms '
+             'used, 215 &rarr; 45 lines).</li>'
+             '<li>&ldquo;too many params&rdquo; &mdash; partially inherent. A <em>controlled</em> form legitimately needs its '
+             'controllers passed in from the <code>StatefulWidget</code> that disposes them. We did <strong>not</strong> chase '
+             'param-count reduction by moving the birthday section up into the page, because that scatters one form&rsquo;s '
+             'layout across two files for a cosmetic win.</li>'
+             '</ol>')
+    b.append(callout("the principled fix (if ever desired) is a form-<em>state</em> object (e.g. an "
+                     "<code>OnboardingFormController</code> holding all controllers) so one object is passed instead of N "
+                     "&mdash; &ldquo;change the method of feeding params&rdquo;, the other half of the TODO. Deferred as not "
+                     "urgent.", "info", "The other half:"))
+
+    b.append(h2("tradeoffs", "4. Trade-offs"))
+    b.append('<ul>'
+             '<li>Param count stayed similar; we prioritised correct layering over a smaller signature, and documented the '
+             'form-state-object path for later.</li>'
+             '<li>Field corner radius shifts 18 &rarr; 16 here (from <code>AppRadii.elements</code>) &mdash; flagged for '
+             'visual review.</li>'
+             '</ul>')
+
+    b.append(h2("result", "5. Result"))
+    b.append(callout("The TODO&rsquo;s substantive complaint (monolithic, duplicated layout) is resolved. "
+                     "<code>flutter analyze</code> clean; ProfileForm overflow tests pass on 320/402/440 widths.",
+                     "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W05 — APPPRIMARYBUTTON
+# ======================================================================
+TITLE_W05 = "05 — AppPrimaryButton · Jio_Leh Widget Refactor"
+DESC_W05 = "The forest CTA, hand-rolled 3×, becomes one opinionated atom that owns its spinner."
+
+def body_w05():
+    b = [wcrumbs("05 · AppPrimaryButton")]
+    b.append('<span class="eyebrow">Change 05 &middot; Extract an atom (CTA)</span>')
+    b.append('<h1>AppPrimaryButton + onboarding_page</h1>')
+    b.append('<p class="lead">The forest-green &ldquo;lifted&rdquo; call-to-action &mdash; a <code>DecoratedBox</code> offset '
+             'shadow + <code>FilledButton</code> + a spinner toggle &mdash; appeared 3&times;. Third occurrence &rArr; extract '
+             'an atom.</p>')
+    b.append(wmeta(chip('Files <code>app_primary_button.dart</code> · <code>onboarding_page.dart</code>'),
+                   chip('~55 &rarr; 7 lines (call site)'),
+                   chip('Rule of three met')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p>The forest-green &ldquo;lifted&rdquo; CTA button (a <code>DecoratedBox</code> with a solid offset shadow + '
+             '<code>FilledButton</code> + a loading-spinner-or-content toggle) was hand-rolled in onboarding '
+             '(&ldquo;Start exploring&rdquo;) and again, nearly identically, in profile_edit (&ldquo;All saved&rdquo;). The '
+             'spinner-or-content toggle alone appeared in 5+ places. Third occurrence &rArr; extract an atom.</p>')
+
+    b.append(h2("changed", "2. What changed"))
+    b.append('<p>New <code>AppPrimaryButton</code>:</p>')
+    b.append(code(r'''
+AppPrimaryButton({
+  required String label,
+  required VoidCallback? onPressed,
+  IconData? icon,            // optional leading icon
+  bool isLoading = false,
+})''', name="lib/widgets/app_primary_button.dart"))
+    b.append('<p><strong>Fixed (baked in):</strong> forest fill + forest offset shadow, radius '
+             '(<code>AppRadii.elements</code>), height (<code>AppButtonHeights.primary</code>), elevation 0, bold text, white '
+             'foreground, <code>disabledBackgroundColor</code> (<code>AppColors.disabledButton</code>). '
+             '<strong>Variable (params):</strong> label, optional leading icon, <code>isLoading</code>, <code>onPressed</code>.</p>')
+    b.append(callout("when <code>isLoading</code> is true the atom shows the spinner <em>and</em> nulls <code>onPressed</code> "
+                     "internally, so the caller never wires the disable logic or the <code>SizedBox</code> spinner by hand.",
+                     "bulb", "The key win:"))
+    b.append('<p>In onboarding_page, the ~55-line button block became:</p>')
+    b.append(code(r'''
+AppPrimaryButton(label: 'Start exploring', icon: Icons.check,
+                 isLoading: _submitting, onPressed: _submit)''', name="onboarding_page.dart — after"))
+
+    b.append(h2("decisions", "3. Decisions & trade-offs"))
+    b.append(h3("d-spinner", "(a) The spinner is owned by the atom"))
+    b.append('<p>The <code>isLoading</code>&rarr;spinner+disable behaviour is encapsulated. Callers stop repeating the '
+             '<code>SizedBox(20×20, CircularProgressIndicator)</code> + the <code>isLoading ? null : onPressed</code> pattern. '
+             'This removes the most error-prone duplication.</p>')
+    b.append(h3("d-icon", "(b) Icon is IconData?, not a Widget"))
+    b.append('<p>Kept the leading icon as an optional <code>IconData</code> &mdash; a simpler API for the common case (a '
+             'Material icon). This is exactly why the Google sign-in button is <strong>not</strong> this atom (it needs a '
+             'custom logo widget &mdash; see <a href="widget-06-login-widgets.html">Change 06</a>). Aside: '
+             '<code>Icon</code>&rsquo;s first arg is itself <code>IconData?</code>, so no null-assert is needed.</p>')
+    b.append(h3("d-tokens", "(c) Tokens, not magic"))
+    b.append('<p>radius &rarr; <code>AppRadii.elements</code>; disabled &rarr; <code>AppColors.disabledButton</code>; height '
+             '&rarr; <code>AppButtonHeights.primary</code>. The forest offset shadow (blur 0, offset (0,4)) is intrinsic to '
+             'this button and lives once inside the atom &mdash; the atom <em>is</em> the single definition, so inlining those '
+             'layout constants is fine. The <code>textStyle</code> <code>fontSize 16</code> was kept inline to preserve the '
+             'exact look (vs the nearby <code>AppTextSizes.button = 17</code>, which would change it).</p>')
+
+    b.append(h2("cons", "4. Cons / notes"))
+    b.append('<ul>'
+             '<li>The atom is <strong>opinionated</strong> (forest, full-width, height 54). Other &ldquo;lifted&rdquo; buttons '
+             'with different colours/sizes (Google: black; Delete: red, height 46, left-aligned) are intentionally <em>not</em> '
+             'forced through it &mdash; see <a href="widget-06-login-widgets.html">06</a> and '
+             '<a href="widget-10-profile-edit.html">10</a>. This avoids over-generalizing the atom into a parameter soup.</li>'
+             '<li>The save-button spinner colour changes from explicit white to the atom default &mdash; a tiny visual delta, '
+             'accepted for consistency with onboarding.</li>'
+             '</ul>')
+
+    b.append(h2("result", "5. Result"))
+    b.append(callout("One CTA atom; onboarding&rsquo;s button is 7 lines. <code>flutter analyze</code> clean.",
+                     "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W06 — LOGIN_WIDGETS TOKENIZATION
+# ======================================================================
+TITLE_W06 = "06 — login_widgets tokenization · Jio_Leh Widget Refactor"
+DESC_W06 = "Strip the raw hex from login_widgets — and decline to merge the Google button into the CTA atom."
+
+def body_w06():
+    b = [wcrumbs("06 · login_widgets tokenization")]
+    b.append('<span class="eyebrow">Change 06 &middot; Tokenize (+ a &ldquo;don&rsquo;t merge&rdquo; call)</span>')
+    b.append('<h1>login_widgets tokenization</h1>')
+    b.append('<p class="lead">Already well-structured, but still carrying raw hex. Tokenize it &mdash; and consciously keep '
+             'the Google button its own widget.</p>')
+    b.append(wmeta(chip('File <code>lib/pages/auth/login_widgets.dart</code>'),
+                   chip('No magic values'),
+                   chip('Rule of three (not met)')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p><code>login_widgets</code> was already well-structured (<code>BrandLockup</code>, <code>SignInPanel</code>, '
+             'private <code>_GoogleSignInButton</code>, <code>_GoogleLogoDisc</code>) &mdash; a good example of public-vs-private '
+             'widget naming. But it still carried raw hex: the tagline grey 0xFF776F65, the sign-in body grey 0xFF7A736A '
+             '(&times;3), and the Google button&rsquo;s 0xFF211D18 face, 0xFF4B443B disabled, radius 16, height 54.</p>')
+
+    b.append(h2("changed", "2. What changed"))
+    b.append('<ul>'
+             '<li>0xFF776F65 &rarr; <code>AppColors.taglineText</code></li>'
+             '<li>0xFF7A736A (&times;3) &rarr; <code>AppColors.authBodyText</code></li>'
+             '<li>Google button: 0xFF211D18 &rarr; <code>AppColors.darkButton</code>; 0xFF4B443B &rarr; '
+             '<code>AppColors.disabledButton</code>; radius 16 &rarr; <code>AppRadii.elements</code>; height 54 &rarr; '
+             '<code>AppButtonHeights.primary</code>.</li>'
+             '</ul>')
+
+    b.append(h2("key-decision", "3. The key decision — merge the Google button into AppPrimaryButton?"))
+    b.append('<p>Considered explicitly.</p>')
+    b.append(table(["Option", "Pros", "Cons", "Verdict"], [
+        ["<strong>A</strong> &mdash; generalize <code>AppPrimaryButton</code> to accept a background colour, shadow colour, "
+         "and a leading <em>widget</em>, then use it for Google too",
+         "One button to rule them all.",
+         "Google needs a custom logo disc (a <code>Widget</code>, not an <code>IconData</code>), a different colour scheme, "
+         "and is a one-off branded control. Folding it in would bloat <code>AppPrimaryButton</code> with "
+         "<code>bgColor</code>/<code>shadowColor</code>/<code>leadingWidget</code> params for a single special case &mdash; "
+         "the &ldquo;parameter soup&rdquo; smell.", RJ()],
+        ["<strong>B</strong> &mdash; keep <code>_GoogleSignInButton</code> as its own private widget; just tokenize its "
+         "hex/magic numbers",
+         "<code>AppPrimaryButton</code> stays lean and opinionated; the branded button stays self-contained.",
+         "Two button implementations coexist (but they are genuinely different).", CH()],
+    ]))
+    b.append(callout("Option <strong>B</strong>. There <em>is</em> shared structure (the lifted <code>DecoratedBox</code> + "
+                     "<code>FilledButton</code>), but not enough, and with enough differences, that merging would cost more "
+                     "than it saves. A lower &ldquo;lifted button primitive&rdquo; could be extracted <em>later</em> if a third "
+                     "differently-styled lifted button appears (rule of three).", "bulb", "Decision:"))
+
+    b.append(h2("left-alone", "4. Things deliberately left alone"))
+    b.append('<ul>'
+             '<li><code>SignInPanel</code>&rsquo;s white-panel radius 20 &mdash; a unique, single-use radius; not a token '
+             '(would mislead).</li>'
+             '<li>The Google button&rsquo;s <code>Colors.black</code> outer/shadow &mdash; a framework constant, not a magic '
+             'hex.</li>'
+             '<li><code>BrandLockup</code>&rsquo;s logo sizes (150/450/100) &mdash; one-off visual tuning; left inline.</li>'
+             '</ul>')
+
+    b.append(h2("result", "5. Result"))
+    b.append(callout("<code>login_widgets</code> has no stray hex greys and the Google button is token-driven, while staying "
+                     "its own widget. <code>flutter analyze</code> clean.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W07 — LOGIN_PAGE SNACKBAR
+# ======================================================================
+TITLE_W07 = "07 — login_page snackbar cleanup · Jio_Leh Widget Refactor"
+DESC_W07 = "The smallest change — a semantic token for a font size, a leading-dot fix, and a one-off left inline."
+
+def body_w07():
+    b = [wcrumbs("07 · login_page snackbar")]
+    b.append('<span class="eyebrow">Change 07 &middot; The smallest change</span>')
+    b.append('<h1>login_page snackbar cleanup</h1>')
+    b.append('<p class="lead">Tokenize a hardcoded font size, fix a suspicious leading-dot radius, and consciously leave a '
+             'genuine one-off inline.</p>')
+    b.append(wmeta(chip('File <code>lib/pages/auth/login_page.dart</code>'),
+                   chip('Tokenize repetition, not one-offs'),
+                   chip('Behaviour-preserving')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p>The smallest change. <code>_showSnackBar</code> styled its text with a hardcoded <code>fontSize: 18</code> '
+             'and shaped the bar with a suspicious <code>borderRadius: .circular(10.0)</code> (missing the '
+             '<code>BorderRadius.</code> prefix &mdash; a leading-dot form that compiled but read as a typo/oddity).</p>')
+
+    b.append(h2("changed", "2. What changed"))
+    b.append('<ul>'
+             '<li><code>fontSize: 18</code> &rarr; <code>AppTextSizes.subtitle</code> (which is exactly 18.0, so no visual '
+             'change &mdash; but now semantic and centralized).</li>'
+             '<li><code>.circular(10.0)</code> &rarr; <code>BorderRadius.circular(10)</code> (explicit and conventional).</li>'
+             '</ul>')
+
+    b.append(h2("decisions", "3. Decisions & trade-offs"))
+    b.append('<ul>'
+             '<li>The snackbar corner radius 10 was <strong>left as an inline literal</strong>. It is a genuine one-off (no '
+             'other component uses 10), so tokenizing it would add indirection with no reuse benefit &mdash; consistent with '
+             'the &ldquo;tokenize repetition, not one-offs&rdquo; principle from '
+             '<a href="widget-01-theme-tokens.html">Change 01</a>.</li>'
+             '<li>Used <code>AppTextSizes.subtitle</code> rather than inventing a new &ldquo;snackbar&rdquo; token: the value '
+             'already existed and matched exactly; reuse beats proliferation.</li>'
+             '</ul>')
+
+    b.append(h2("result", "4. Result"))
+    b.append(callout("The auth feature&rsquo;s pure-scope cleanups are now complete. The remaining auth items (birthday "
+                     "validation parity, ProfileForm params) were deferred to the profile feature because they are "
+                     "cross-cutting. <code>flutter analyze</code> clean.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W08 — USERNAMERULE
+# ======================================================================
+TITLE_W08 = "08 — UsernameRule · Jio_Leh Widget Refactor"
+DESC_W08 = "One rule object so the hint, the input formatters, and the submit regex can never disagree."
+
+def body_w08():
+    b = [wcrumbs("08 · UsernameRule")]
+    b.append('<span class="eyebrow">Change 08 &middot; Single source of truth</span>')
+    b.append('<h1>UsernameRule (single source of truth)</h1>')
+    b.append('<p class="lead">The &ldquo;3&ndash;10 lowercase letters or digits&rdquo; rule lived in three independent '
+             'places. Derive all three from one set of constants.</p>')
+    b.append(wmeta(chip('File <code>lib/pages/profile/username_rule.dart</code>'),
+                   chip('DRY / single source of truth'),
+                   chip('Behaviour-preserving')))
+
+    b.append(h2("problem", "1. Context / problem"))
+    b.append('<p>The rule was encoded in <strong>three unrelated places</strong> that did not know about each other:</p>')
+    b.append('<ol>'
+             '<li>the field <strong>hint</strong> text &ldquo;3-10 lowercase letters or digits&rdquo;;</li>'
+             '<li>the <strong>input formatters</strong>: <code>FilteringTextInputFormatter.allow([a-z0-9])</code> + '
+             '<code>LengthLimitingTextInputFormatter(10)</code>;</li>'
+             '<li>the <strong>submit validation</strong> regex <code>^[a-z0-9]{3,10}$</code> + the error message.</li>'
+             '</ol>')
+    b.append('<p>The numbers (3, 10) and the charset <code>[a-z0-9]</code> were copied across all three.</p>')
+    b.append(callout("change the formatter&rsquo;s max to 12 but forget the regex, and the field lets you type 12 chars while "
+                     "submit rejects them &mdash; a confusing, hard-to-trace inconsistency the compiler cannot catch, because "
+                     "the three sites are independent.", "warn", "Why dangerous:"))
+
+    b.append(h2("changed", "2. What changed"))
+    b.append('<p>Created <code>UsernameRule</code> as the single source of truth. Everything derives from three constants:</p>')
+    b.append(code(r'''
+static const minLength  = 3;
+static const maxLength  = 10;          // later bumped to 15 by the user
+static const _charClass = '[a-z0-9]';
+
+allowedChars    = RegExp(_charClass)                              // per-char (formatter)
+_full           = RegExp('^$_charClass{$minLength,$maxLength}$')  // submit
+isValid(s)      = _full.hasMatch(s)
+hint            = '$minLength-$maxLength lowercase letters or digits'
+errorMessage    = 'Username must be $minLength-$maxLength letters or digits.'
+inputFormatters = [allow(allowedChars), LengthLimiting(maxLength)]''',
+                  name="lib/pages/profile/username_rule.dart", lang="text"))
+    b.append('<p>The form field uses <code>UsernameRule.hint</code> + <code>.inputFormatters</code>; submit uses '
+             '<code>.isValid</code> + <code>.errorMessage</code>.</p>')
+
+    b.append(h2("design", "3. Design points & trade-offs"))
+    b.append('<ul>'
+             '<li>The regex is <strong>built from the constants</strong> (string interpolation) so the bounds cannot drift '
+             'from <code>minLength</code>/<code>maxLength</code>. Same for <code>hint</code> and <code>errorMessage</code>.</li>'
+             '<li>Removed the <code>flutter/services.dart</code> import from <code>onboarding_widgets</code> once the formatters '
+             'moved into <code>UsernameRule</code> (kept imports honest; the analyzer would warn otherwise).</li>'
+             '<li>En-dash vs hyphen: standardized to a generated hyphen string (minor copy normalization).</li>'
+             '<li>Could this be a fuller value object / validator class with parsing? Yes, but <strong>YAGNI</strong> &mdash; a '
+             'thin rule holder is enough for one field.</li>'
+             '</ul>')
+    b.append(callout("the user later raised <code>maxLength</code> 10 &rarr; 15 by editing <strong>one constant</strong>; the "
+                     "hint, regex, error message, and field length limit all followed automatically. That is the whole point "
+                     "&mdash; &ldquo;where do I change the length?&rdquo; has exactly one answer.", "good",
+                     "Validation of the payoff:"))
+
+    b.append(h2("result", "4. Result"))
+    b.append(callout("One home for the username rule. The three sites can no longer disagree. <code>flutter analyze</code> "
+                     "clean.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W09 — BIRTHDAY MERGE
+# ======================================================================
+TITLE_W09 = "09 — Birthday merge · Jio_Leh Widget Refactor"
+DESC_W09 = "One strict parser kills two silent bugs — and the case for NOT merging the two forms."
+
+def body_w09():
+    b = [wcrumbs("09 · Birthday merge")]
+    b.append('<span class="eyebrow">Change 09 &middot; Single source of truth (+ a &ldquo;don&rsquo;t merge&rdquo; call)</span>')
+    b.append('<h1>Birthday merge (lib/util/birthday.dart)</h1>')
+    b.append('<p class="lead">The month list and the day/month/year parser lived in both screens &mdash; and had silently '
+             'diverged. Unify to the strict version; share components, not the whole form.</p>')
+    b.append(wmeta(chip('File <code>lib/util/birthday.dart</code>'),
+                   chip('Unify to the stronger version'),
+                   chip('Two real bugs fixed')))
+
+    b.append(h2("problem", "1. Context / problem"))
+    b.append('<p>The month list (<code>_months</code>) and the day/month/year parser (<code>_buildBirthday</code>) lived in '
+             '<strong>both</strong> onboarding_page and profile_edit_page. Worse than duplication: the two copies had '
+             '<strong>diverged</strong>.</p>')
+    b.append(table(["Scenario", "onboarding (the weaker copy)", "profile_edit (correct)"], [
+        ["<strong>A</strong> &mdash; day+year filled, month <em>not</em> picked",
+         "returns <code>null</code> &rarr; birthday <strong>silently dropped</strong> (user thinks it saved); profile created "
+         "with no birthday.",
+         "throws <code>FormatException</code> &rarr; &ldquo;Enter a full birthday or leave it empty.&rdquo; (user is told)."],
+        ["<strong>B</strong> &mdash; day = 99, month = Feb, year = 1990",
+         "<code>DateTime(1990,2,99)</code> silently <strong>rolls over</strong> to ~May &rarr; a wrong date is stored.",
+         "round-trip check (<code>birthday.day != 99</code>) &rarr; &ldquo;Enter a valid birthday.&rdquo; (rejected)."],
+    ]))
+    b.append('<p>So onboarding was the weaker, buggy version: silent loss + overflow accepted.</p>')
+
+    b.append(h2("changed", "2. What changed"))
+    b.append('<p>Created <code>lib/util/birthday.dart</code> with:</p>')
+    b.append('<ul>'
+             '<li><code>const kMonthNames</code> &mdash; the 12 full month names (was duplicated in 3 places: onboarding, '
+             'profile_edit, and passed into <code>BirthdayRow</code>).</li>'
+             '<li><code>DateTime? parseBirthday({day, year, month})</code> &mdash; the <strong>strict</strong> version: '
+             'returns <code>null</code> only when all empty; throws <code>FormatException</code> on partial input; throws on '
+             'overflow via the round-trip check.</li>'
+             '</ul>')
+    b.append('<p>Wired into both onboarding_page and profile_edit. Onboarding&rsquo;s <code>_submit</code> was restructured to '
+             'validate the birthday (<code>try</code>/<code>on FormatException</code>) <strong>before</strong> '
+             '<code>setState</code>/<code>createProfile</code> &mdash; otherwise a thrown <code>FormatException</code> would '
+             'have fallen into the generic catch and shown an ugly &ldquo;Could not save profile: FormatException&hellip;&rdquo; '
+             'message.</p>')
+    b.append(callout("this fixed onboarding&rsquo;s two bugs <em>for free</em>, simply by sharing the strict implementation.",
+                     "good", "Bonus:"))
+
+    b.append(h2("bigger", "3. The bigger question — should the two screens share one form widget?"))
+    b.append('<p>The user asked whether the two &ldquo;very similar&rdquo; screens should be merged into a single shared form. '
+             'We compared fields:</p>')
+    b.append(table(["Field", "onboarding", "profile_edit"], [
+        ["username", "YES (create-only)", "NO"],
+        ["display name", "YES", "YES"],
+        ["bio", "NO", "YES"],
+        ["birthday", "YES", "YES"],
+        ["photo", "YES (circle)", "YES (150 rectangle &mdash; different UI)"],
+        ["delete account", "NO", "YES"],
+        ["progress/header", "YES", "NO"],
+        ["submit semantics", "<code>createProfile</code>", "<code>updateProfile</code>"],
+    ]))
+    b.append('<p>Only display-name + birthday truly overlap.</p>')
+    b.append(table(["Option", "Pros", "Cons", "Verdict"], [
+        ["<strong>A</strong> &mdash; one shared <code>ProfileForm</code> with flags (<code>showUsername</code>, "
+         "<code>showBio</code>, <code>showDelete</code>, <code>photoStyle</code>, <code>isOnboarding</code>&hellip;)",
+         "Looks like reuse.",
+         "The classic &ldquo;boolean Frankenstein&rdquo; &mdash; two screens that will evolve independently get welded "
+         "together; every future change risks breaking the other. Looks like reuse, creates coupling.", RJ()],
+        ["<strong>B</strong> &mdash; keep two pages; share at the <em>piece</em> level (atoms, BirthdayRow, parseBirthday); "
+         "each page composes its own layout",
+         "Real reuse where things are identical; freedom where they differ.",
+         "Two layouts to maintain (but they genuinely differ).", CH()],
+    ]))
+    b.append(callout("Option <strong>B</strong>. The overlap is too small and the differences too structural to justify a "
+                     "unified form. We share <strong>components</strong>, not the whole form. Composition over flag-driven "
+                     "mega-widgets.", "bulb", "Decision:"))
+
+    b.append(h2("where", "4. Where to put the shared logic"))
+    b.append('<p>It is pure logic (no widgets, no I/O), so not in a widget file or page. Options weighed:</p>')
+    b.append('<ul>'
+             '<li><code>lib/util/</code> &mdash; neutral logic. ' + CH() + '</li>'
+             '<li><code>lib/models/</code> &mdash; models hold data classes, not functions; an odd fit. ' + RJ() + '</li>'
+             '<li>inside <code>birthday_row.dart</code> &mdash; mixes logic into a widget file; violates layering. ' + RJ() + '</li>'
+             '</ul>')
+    b.append('<p>Chose <code>lib/util/birthday.dart</code>.</p>')
+
+    b.append(h2("tradeoffs", "5. Trade-offs / notes"))
+    b.append('<ul>'
+             '<li>Onboarding behaviour changed (now strict) &mdash; an intended fix, but a behaviour change to verify '
+             'manually.</li>'
+             '<li>A small lint (dangling library doc comment) and a leftover <code>_months</code> reference in '
+             'profile_edit&rsquo;s not-yet-refactored dropdown were caught by <code>analyze</code> and fixed; the widget test '
+             'that passed <code>months:</code> was updated.</li>'
+             '</ul>')
+
+    b.append(h2("result", "6. Result"))
+    b.append(callout("One birthday parser, one month list, identical validation in both screens, two real bugs gone. "
+                     "<code>flutter analyze</code> clean; all 50 tests pass.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W10 — PROFILE_EDIT ON ATOMS
+# ======================================================================
+TITLE_W10 = "10 — profile_edit_page on atoms · Jio_Leh Widget Refactor"
+DESC_W10 = "The biggest monolith (~510 lines) more than halves — and what we deliberately did NOT force through an atom."
+
+def body_w10():
+    b = [wcrumbs("10 · profile_edit on atoms")]
+    b.append('<span class="eyebrow">Change 10 &middot; Compose (+ danger tokens)</span>')
+    b.append('<h1>profile_edit_page rebuilt on atoms</h1>')
+    b.append('<p class="lead">The largest monolith &mdash; ~510 lines &mdash; rebuilt on the atoms, ending as a readable list '
+             'of sections (~250 lines).</p>')
+    b.append(wmeta(chip('File <code>lib/pages/profile/profile_edit_page.dart</code>'),
+                   chip('~510 &rarr; ~250 lines'),
+                   chip('Rule of three (delete button: not met)')))
+
+    b.append(h2("context", "1. Context"))
+    b.append('<p>The largest monolith (~550 lines originally). After the birthday merge it was ~510. Its <code>build()</code> '
+             'hand-rolled PROFILE PHOTO, DISPLAY NAME, BIO, the full birthday row, a delete-account button, and the save '
+             'button &mdash; all inline with raw hex, radii, and shadows.</p>')
+
+    b.append(h2("changed", "2. What changed"))
+    b.append('<ul>'
+             '<li>Labels &rarr; <code>AppSectionLabel</code>.</li>'
+             '<li>DISPLAY NAME, BIO &rarr; <code>AppTextField</code> (BIO uses <code>height: 110</code>, '
+             '<code>maxLines: null</code>).</li>'
+             '<li>Birthday section &rarr; <code>BirthdayRow</code> (and BirthdayRow gained the digit/length limits profile_edit '
+             'used to carry &mdash; now both screens have them; see <a href="widget-03-birthday-row.html">03</a>).</li>'
+             '<li>Save button (&ldquo;All saved&rdquo;) &rarr; <code>AppPrimaryButton</code> (exact match: forest, full-width, '
+             '<code>isLoading</code> spinner).</li>'
+             '<li>Delete-account button &rarr; <strong>kept</strong> as a bespoke widget, but its red hex was tokenized: '
+             '<code>AppColors.danger</code> (face) + <code>AppColors.dangerShadow</code>; radius &rarr; '
+             '<code>AppRadii.elements</code>.</li>'
+             '<li>PROFILE PHOTO placeholder box kept (a unique 150-tall picker placeholder, no shadow) with radius '
+             'tokenized.</li>'
+             '<li>Removed the now-unused <code>flutter/services.dart</code> import.</li>'
+             '</ul>')
+    b.append('<p>Result: ~510 &rarr; ~250 lines.</p>')
+
+    b.append(h2("decisions", "3. Decisions & trade-offs"))
+    b.append(h3("d-delete", "(a) The delete button is not forced into AppPrimaryButton"))
+    b.append('<p>It is a different colour (red), size (height 46), alignment (left), and weight (font 14) &mdash; and it has no '
+             '<code>isLoading</code>. Forcing it through <code>AppPrimaryButton</code> would require '
+             '<code>bgColor</code>/<code>shadowColor</code>/<code>width</code>/<code>height</code>/<code>fontSize</code> params: '
+             'over-generalization. Used once &rarr; keep bespoke, just tokenize the colours (rule of three not met).</p>')
+    b.append(callout("its <code>onPressed</code> is still a placeholder <code>() {}</code> &mdash; delete is not yet "
+                     "implemented; behaviour was left as-is, only the styling was tokenized.", "info", "Note:"))
+    b.append(h3("d-photo", "(b) The photo box is not an AppFieldBox"))
+    b.append('<p><code>AppFieldBox</code> carries the field shadow; the photo placeholder has no shadow and a different height '
+             '(150). Different visual &rarr; not the same atom. Kept as a plain <code>DecoratedBox</code> with tokenized '
+             'radius.</p>')
+    b.append(h3("d-bio", "(c) BIO height 110 inline"))
+    b.append('<p>Per the <code>AppTextField</code> design (no multiline token; callers size their own tall fields), 110 is '
+             'passed inline &mdash; a conscious single-use literal.</p>')
+    b.append(h3("d-limits", "(d) Birthday limits now apply to onboarding too"))
+    b.append('<p>Because the limits live in <code>BirthdayRow</code>, unifying improved onboarding as a side effect (a '
+             'consistency win).</p>')
+
+    b.append(h2("tradeoffs", "4. Trade-offs"))
+    b.append('<ul>'
+             '<li>Field radius 18 &rarr; 16 here as well (token unification) &mdash; a visual review item.</li>'
+             '<li>Save-button spinner colour: explicit white &rarr; atom default (minor).</li>'
+             '</ul>')
+
+    b.append(h2("result", "5. Result"))
+    b.append(callout("The biggest file more than halved; its <code>build()</code> reads as a list of sections. "
+                     "<code>flutter analyze</code> clean; all 50 tests pass.", "good", "Result:"))
+    return "".join(b)
+
+# ======================================================================
+# W11 — RELOCATE ONBOARDING
+# ======================================================================
+TITLE_W11 = "11 — Relocate onboarding into profile · Jio_Leh Widget Refactor"
+DESC_W11 = "Pure organization: move onboarding next to the profile code it shares everything with."
+
+def body_w11():
+    b = [wcrumbs("11 · Relocate onboarding")]
+    b.append('<span class="eyebrow">Change 11 &middot; Organize by what changes together</span>')
+    b.append('<h1>Relocate onboarding into profile</h1>')
+    b.append('<p class="lead">Does onboarding belong under <code>auth/</code> (the sign-up flow) or <code>profile/</code> (it '
+             'creates a profile)? Decided by what it changes <em>with</em>.</p>')
+    b.append(wmeta(chip('<code>git mv</code> (history preserved)'),
+                   chip('Pure organization'),
+                   chip('4 imports updated')))
+
+    b.append(h2("moves", "The moves"))
+    b.append(code(r'''
+lib/pages/auth/onboarding_page.dart            -> lib/pages/profile/
+lib/pages/auth/onboarding_widgets.dart         -> lib/pages/profile/
+lib/pages/auth/username_rule.dart              -> lib/pages/profile/
+test/pages/auth/onboarding_widgets_test.dart   -> test/pages/profile/''',
+                  name="file moves", lang="text"))
+
+    b.append(h2("question", "1. The question"))
+    b.append('<p>Does onboarding belong under <code>auth/</code> (it is part of the sign-up flow, driven by '
+             '<code>AuthGate</code>) or under <code>profile/</code> (it <em>creates</em> a profile)? This is the classic '
+             '&ldquo;organize by flow vs by domain&rdquo; tension.</p>')
+
+    b.append(h2("test", "2. The deciding test — “what changes together?”"))
+    b.append('<p>The most reliable test for where code lives is not what it &ldquo;feels like&rdquo; but what it tends to '
+             'change <strong>with</strong>.</p>')
+    b.append('<ul>'
+             '<li><strong>Case A &mdash; the auth flow changes</strong> (add email verification, change gate routing): '
+             'onboarding&rsquo;s coupling to auth is <em>loose</em> &mdash; <code>AuthGate</code> just imports it and passes an '
+             '<code>onComplete</code> callback.</li>'
+             '<li><strong>Case B &mdash; the profile data model changes</strong> (add a field): onboarding and profile_edit '
+             'are nearly the same form. They share <code>UserProfile</code>, <code>AccountService</code>, the field atoms, '
+             '<code>BirthdayRow</code>, <code>parseBirthday</code>, and the <code>createProfile</code>/<code>updateProfile</code> '
+             'pair. This coupling is <em>tight</em> and <em>frequent</em>.</li>'
+             '</ul>')
+    b.append('<p>Case B dominates. By &ldquo;what changes together&rdquo;, onboarding is far closer to profile than to auth. '
+             'After the refactor this is concrete: onboarding now literally imports the same widgets/util as profile_edit.</p>')
+    b.append(callout("move onboarding into <code>profile/</code>. Framing: it is &ldquo;create your profile&rdquo;, the "
+                     "sibling of profile_edit&rsquo;s &ldquo;edit your profile&rdquo;.", "bulb", "Decision:"))
+
+    b.append(h2("dependency", "3. Dependency direction — why username_rule moved too"))
+    b.append('<p>username is a <code>UserProfile</code> field; its rule is a <strong>profile</strong> concern, and only '
+             'onboarding uses it. If we moved only onboarding and left <code>username_rule</code> in <code>auth/</code>, we '
+             'would create a <code>profile &rarr; auth</code> dependency (profile/onboarding importing auth/username_rule) '
+             '&mdash; an awkward backward arrow. Moving <code>username_rule</code> into <code>profile/</code> keeps the '
+             'dependency direction clean.</p>')
+
+    b.append(h2("risk", "4. Risk & execution"))
+    b.append('<p>Low risk. Used <code>git mv</code> for the tracked files (preserves history; the diff shows them as renames) '
+             'and a plain <code>mv</code> for the untracked <code>username_rule</code>. Updated four imports: '
+             '<code>AuthGate</code> &rarr; profile/onboarding_page; onboarding_page and onboarding_widgets &rarr; '
+             'profile/username_rule; the test &rarr; profile/onboarding_widgets. The relative '
+             '<code>import \'onboarding_widgets.dart\'</code> inside onboarding_page stayed valid (both files moved together). '
+             '<code>AuthGate</code> already imports across folders (map_page, etc.), so a cross-folder import to profile is '
+             'nothing new. <code>flutter analyze</code> + all 50 tests confirmed green afterward.</p>')
+
+    b.append(h2("framing", "5. Important framing"))
+    b.append(callout("this move is <strong>pure organization</strong>. It produces no new feature and no new sharing &mdash; "
+                     "the real sharing (atoms, BirthdayRow, parseBirthday) was already done. We explicitly decoupled the two "
+                     "questions: &ldquo;share components&rdquo; (substance, done earlier) vs &ldquo;move the folder&rdquo; "
+                     "(tidiness, done here). Doing the move was worth it for cohesion but was never urgent.", "info", ""))
+
+    b.append(h2("result", "6. Result"))
+    b.append('<p><code>auth/</code> now holds only login_page, login_widgets, and gate/. Onboarding lives with the profile '
+             'code it actually shares everything with.</p>')
+    b.append(callout("That&rsquo;s the widget refactor &mdash; eleven changes, a foundation of tokens and atoms, and every "
+                     "screen rebuilt on top of it. Head back to the "
+                     "<a href=\"widget-refactor.html\"><strong>Overview</strong></a> for the bird&rsquo;s-eye view.",
+                     "good", "Done:"))
+    return "".join(b)

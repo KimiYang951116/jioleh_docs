@@ -17,18 +17,60 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_DOCS = "https://github.com/KimiYang951116/jioleh-auth-refactor-docs"
 REPO_APP  = "https://github.com/KimiYang951116/JioLeh"
 
+# The design system (CSS) and behaviour (JS) live in assets/ as readable
+# source, but are INLINED into every page at build time so the site stays
+# 100% self-contained (no extra requests, deploys anywhere). Edit the files
+# in assets/, then re-run this script.
+def _read_asset(name):
+    with open(os.path.join(HERE, "assets", name), encoding="utf-8") as f:
+        return f.read()
+
+STYLES = _read_asset("styles.css")
+APPJS  = _read_asset("app.js")
+
 # ----------------------------------------------------------------------
 # Page order (drives sidebar + prev/next)
+#
+# The site documents two refactor PRs as two "books". Each book is a
+# section with its own overview (num "00") + ordered change pages. The
+# sidebar groups them; prev/next stays within a book.
 # ----------------------------------------------------------------------
-PAGES = [
-    ("index.html",                        "00", "Overview & Index"),
-    ("01-auth-service-interface.html",    "01", "AuthService Interface"),
-    ("02-service-provider-di.html",       "02", "ServiceProvider DI"),
-    ("03-auth-gate-split.html",           "03", "AuthGate Split"),
-    ("04-race-condition-fix.html",        "04", "Race Condition Fix"),
-    ("05-error-logging.html",             "05", "Error Logging"),
-    ("06-directory-reorganization.html",  "06", "Directory Reorg"),
+SECTIONS = [
+    {
+        "book": "Auth Service Refactor",
+        "changes_label": "The six changes",
+        "pages": [
+            ("index.html",                        "00", "Overview & Index"),
+            ("01-auth-service-interface.html",    "01", "AuthService Interface"),
+            ("02-service-provider-di.html",       "02", "ServiceProvider DI"),
+            ("03-auth-gate-split.html",           "03", "AuthGate Split"),
+            ("04-race-condition-fix.html",        "04", "Race Condition Fix"),
+            ("05-error-logging.html",             "05", "Error Logging"),
+            ("06-directory-reorganization.html",  "06", "Directory Reorg"),
+        ],
+    },
+    {
+        "book": "Auth & Profile Widget Refactor",
+        "changes_label": "The eleven changes",
+        "pages": [
+            ("widget-refactor.html",               "00", "Overview & Index"),
+            ("widget-01-theme-tokens.html",        "01", "Theme Tokens"),
+            ("widget-02-field-atoms.html",         "02", "Field Atoms"),
+            ("widget-03-birthday-row.html",        "03", "BirthdayRow"),
+            ("widget-04-onboarding-widgets.html",  "04", "onboarding_widgets on atoms"),
+            ("widget-05-app-primary-button.html",  "05", "AppPrimaryButton"),
+            ("widget-06-login-widgets.html",       "06", "login_widgets tokenization"),
+            ("widget-07-login-snackbar.html",      "07", "login_page snackbar"),
+            ("widget-08-username-rule.html",       "08", "UsernameRule"),
+            ("widget-09-birthday-merge.html",      "09", "Birthday merge"),
+            ("widget-10-profile-edit.html",        "10", "profile_edit on atoms"),
+            ("widget-11-relocate-onboarding.html", "11", "Relocate onboarding"),
+        ],
+    },
 ]
+
+# Flat list (build loop + lookups)
+PAGES = [p for s in SECTIONS for p in s["pages"]]
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -109,7 +151,7 @@ SHELL = """<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css">
+%%STYLES%%
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231d3d28'/><text x='16' y='22' font-size='15' font-family='monospace' font-weight='bold' fill='%2346c47e' text-anchor='middle'>JL</text></svg>">
 <script>try{var t=localStorage.getItem('jl-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
@@ -123,8 +165,8 @@ SHELL = """<!doctype html>
   </a>
   <span class="spacer"></span>
   <nav class="tnav">
-    <a href="index.html">Overview</a>
-    <a href="01-auth-service-interface.html">Changes</a>
+    <a href="index.html">Auth Service</a>
+    <a href="widget-refactor.html">Widget Refactor</a>
   </nav>
   <a class="icon-btn" href="%%REPO_APP%%" target="_blank" rel="noopener" aria-label="App repository">%%IC_GH%%</a>
   <button class="icon-btn" id="themeBtn" aria-label="Toggle theme">%%IC_THEME%%</button>
@@ -140,8 +182,8 @@ SHELL = """<!doctype html>
       %%BODY%%
       %%PREVNEXT%%
       <footer class="foot">
-        <p>Documentation for the <strong>refactor/authentication</strong> work on
-        <a href="%%REPO_APP%%" target="_blank" rel="noopener">Jio_Leh</a> ·
+        <p>Engineering design notes for the
+        <a href="%%REPO_APP%%" target="_blank" rel="noopener">Jio_Leh</a> refactors ·
         Flutter + Supabase · Generated from the change write-ups ·
         <a href="%%REPO_DOCS%%" target="_blank" rel="noopener">site source</a>.</p>
       </footer>
@@ -149,35 +191,38 @@ SHELL = """<!doctype html>
   </main>
   <aside class="toc" id="toc"></aside>
 </div>
-<script src="assets/app.js"></script>
+%%APPJS%%
 </body>
 </html>
 """
 
 def sidebar(active):
-    out = '<div class="side-label">Start here</div>'
-    started_changes = False
-    for fn, num, title in PAGES:
-        if num != "00" and not started_changes:
-            out += '<div class="side-label" style="margin-top:18px">The six changes</div>'
-            started_changes = True
-        cls = "nav-link active" if fn == active else "nav-link"
-        out += ('<a class="%s" href="%s" data-search="%s %s">'
-                '<span class="num">%s</span><span>%s</span></a>'
-                % (cls, fn, esc(title), num, num, esc(title)))
+    out = ""
+    for si, sec in enumerate(SECTIONS):
+        mt = ' style="margin-top:18px"' if si > 0 else ''
+        out += '<div class="side-label"%s>%s</div>' % (mt, esc(sec["book"]))
+        for pi, (fn, num, title) in enumerate(sec["pages"]):
+            if pi == 1:
+                out += ('<div class="side-label" style="margin-top:18px">%s</div>'
+                        % esc(sec["changes_label"]))
+            cls = "nav-link active" if fn == active else "nav-link"
+            out += ('<a class="%s" href="%s" data-search="%s %s">'
+                    '<span class="num">%s</span><span>%s</span></a>'
+                    % (cls, fn, esc(title), num, num, esc(title)))
     return out
 
 def prevnext(active):
-    idx = [i for i, p in enumerate(PAGES) if p[0] == active][0]
-    prev_a = next_a = ""
+    # prev/next stays within the active page's own book.
+    pages = next(s["pages"] for s in SECTIONS if active in [p[0] for p in s["pages"]])
+    idx = [i for i, p in enumerate(pages) if p[0] == active][0]
     if idx > 0:
-        fn, num, title = PAGES[idx - 1]
+        fn, num, title = pages[idx - 1]
         prev_a = ('<a href="%s"><div class="dir">&larr; Previous</div>'
                   '<div class="ttl">%s &middot; %s</div></a>' % (fn, num, esc(title)))
     else:
         prev_a = '<span style="flex:1"></span>'
-    if idx < len(PAGES) - 1:
-        fn, num, title = PAGES[idx + 1]
+    if idx < len(pages) - 1:
+        fn, num, title = pages[idx + 1]
         next_a = ('<a class="next" href="%s"><div class="dir">Next &rarr;</div>'
                   '<div class="ttl">%s &middot; %s</div></a>' % (fn, num, esc(title)))
     else:
@@ -193,6 +238,8 @@ def render(active, title, desc, body):
     out = out.replace("%%IC_GH%%", IC_GH)
     out = out.replace("%%REPO_APP%%", REPO_APP)
     out = out.replace("%%REPO_DOCS%%", REPO_DOCS)
+    out = out.replace("%%STYLES%%", "<style>" + STYLES + "</style>")
+    out = out.replace("%%APPJS%%", "<script>" + APPJS + "</script>")
     out = out.replace("%%SIDEBAR%%", sidebar(active))
     out = out.replace("%%PREVNEXT%%", prevnext(active))
     out = out.replace("%%BODY%%", body)   # last: body may contain other text
@@ -215,6 +262,20 @@ PAGE_DEFS = {
     "04-race-condition-fix.html":       (C.TITLE_04, C.DESC_04, C.body_04),
     "05-error-logging.html":            (C.TITLE_05, C.DESC_05, C.body_05),
     "06-directory-reorganization.html": (C.TITLE_06, C.DESC_06, C.body_06),
+
+    # ---- Book 2: Auth & Profile Widget Refactor ----
+    "widget-refactor.html":               (C.TITLE_W00, C.DESC_W00, C.body_w00),
+    "widget-01-theme-tokens.html":        (C.TITLE_W01, C.DESC_W01, C.body_w01),
+    "widget-02-field-atoms.html":         (C.TITLE_W02, C.DESC_W02, C.body_w02),
+    "widget-03-birthday-row.html":        (C.TITLE_W03, C.DESC_W03, C.body_w03),
+    "widget-04-onboarding-widgets.html":  (C.TITLE_W04, C.DESC_W04, C.body_w04),
+    "widget-05-app-primary-button.html":  (C.TITLE_W05, C.DESC_W05, C.body_w05),
+    "widget-06-login-widgets.html":       (C.TITLE_W06, C.DESC_W06, C.body_w06),
+    "widget-07-login-snackbar.html":      (C.TITLE_W07, C.DESC_W07, C.body_w07),
+    "widget-08-username-rule.html":       (C.TITLE_W08, C.DESC_W08, C.body_w08),
+    "widget-09-birthday-merge.html":      (C.TITLE_W09, C.DESC_W09, C.body_w09),
+    "widget-10-profile-edit.html":        (C.TITLE_W10, C.DESC_W10, C.body_w10),
+    "widget-11-relocate-onboarding.html": (C.TITLE_W11, C.DESC_W11, C.body_w11),
 }
 
 # expose helpers to content module
